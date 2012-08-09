@@ -21,11 +21,14 @@ public class SubstepsLaunchConfigWorkingCopyDecorator implements Decorator<ILaun
     private final Transformer<IProject, IJavaProject> javaProjectTransformer;
     private final ExceptionReporter exceptionReporter;
 
+    private final Transformer<IProject, String> substepsFolderLocator;
+
 
     public SubstepsLaunchConfigWorkingCopyDecorator(final Transformer<IProject, IJavaProject> javaProjectTransformer,
-            final ExceptionReporter exceptionReporter) {
+            final ExceptionReporter exceptionReporter, final Transformer<IProject, String> substepsFolderLocator) {
         this.javaProjectTransformer = javaProjectTransformer;
         this.exceptionReporter = exceptionReporter;
+        this.substepsFolderLocator = substepsFolderLocator;
     }
 
 
@@ -43,6 +46,11 @@ public class SubstepsLaunchConfigWorkingCopyDecorator implements Decorator<ILaun
                 SubstepsLaunchConfigurationConstants.JUNIT4_TEST_KIND_ID);
 
         workingCopy.setAttribute(SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE, filePath);
+        workingCopy.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, project.getName());
+
+        final String substepsFolder = substepsFolderLocator.to(project);
+        workingCopy.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE,
+                substepsFolder != null ? substepsFolder : "");
         workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, vmArgs(filePath, project));
     }
 

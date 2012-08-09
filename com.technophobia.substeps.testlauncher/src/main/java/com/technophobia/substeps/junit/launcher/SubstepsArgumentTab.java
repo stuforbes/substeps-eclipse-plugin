@@ -16,7 +16,6 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.ui.AbstractLaunchConfigurationTab;
-import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
@@ -58,25 +57,31 @@ import org.eclipse.ui.model.BaseWorkbenchContentProvider;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
 
 import com.technophobia.eclipse.launcher.config.SubstepsLaunchConfigurationConstants;
+import com.technophobia.eclipse.transformer.Transformer;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.junit.ui.SubstepsFeatureMessages;
 
 public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
 
-    private static final String[] DEFAULT_SUBSTEPS_FOLDER_LOCATIONS = { "substeps", "src/main/resources/substeps",
-            "src/test/resources/substeps" };
-
     private Text projectText = null;
+    private Text featureFileLocationText = null;
     private Text substepsLocationText = null;
     private Button substepsLocationButton = null;
-
-    private IJavaElement containerElement = null;
 
     private Button addBeforeAndAfterProcessorButton;
 
     private Button removeBeforeAndAfterProcessorButton;
 
     private ListViewer beforeAndAfterProcessorsList;
+
+    private Button featureFileLocationButton;
+
+    private final Transformer<IProject, String> defaultSubstepsLocationFinder;
+
+
+    public SubstepsArgumentTab() {
+        this.defaultSubstepsLocationFinder = new DefaultSubstepsLocationFinder();
+    }
 
 
     @Override
@@ -90,6 +95,7 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         comp.setFont(parent.getFont());
 
         createProjectConfigComponent(comp);
+        createFeatureFileConfigComponent(comp);
         createSubstepsConfigComponent(comp);
         createBeforeAndAfterProcessorsConfigComponent(comp);
     }
@@ -98,12 +104,14 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
     @Override
     public void initializeFrom(final ILaunchConfiguration config) {
         final String projectName = getConfigAttribute(config, SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT);
+        final String featureFile = getConfigAttribute(config, SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE);
         final String substepsFilename = getConfigAttribute(config,
                 SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE);
         final String beforeAndAfterProcessors = getConfigAttribute(config,
                 SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS);
 
         projectText.setText(projectName);
+        featureFileLocationText.setText(featureFile);
         substepsLocationText.setText(substepsFilename);
 
         if (!beforeAndAfterProcessors.trim().isEmpty()) {
@@ -125,9 +133,12 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
 
     @Override
     public void performApply(final ILaunchConfigurationWorkingCopy config) {
-        if (containerElement != null) {
-            config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, containerElement
-                    .getJavaProject().getElementName());
+        if (projectText != null) {
+            config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, projectText.getText().trim());
+        }
+        if (featureFileLocationText != null) {
+            config.setAttribute(SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE, featureFileLocationText.getText()
+                    .trim());
         }
         if (substepsLocationText != null) {
             config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, substepsLocationText.getText()
@@ -146,26 +157,25 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
 
     @Override
     public void setDefaults(final ILaunchConfigurationWorkingCopy configuration) {
-        final IJavaElement javaElement = getContext();
-        if (javaElement != null) {
-            configuration.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT,
-                    javaElement.getElementName());
+        final IResource currentResource = getContext();
+        if (currentResource != null) {
+            final IProject project = currentResource.getProject();
+            configuration.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, project.getName());
 
-            final IProject project = javaElement.getJavaProject().getProject();
-            boolean foundSubstepsFolder = false;
-            for (final String defaultSubstepsFolder : DEFAULT_SUBSTEPS_FOLDER_LOCATIONS) {
-                if (project.getFolder(defaultSubstepsFolder).exists()) {
-                    configuration.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE,
-                            defaultSubstepsFolder);
-                    foundSubstepsFolder = true;
-                    break;
+            if (currentResource instanceof IFile) {
+                final IFile file = (IFile) currentResource;
+                if (file.getFileExtension().equalsIgnoreCase("feature")) {
+                    configuration.setAttribute(SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE,
+                            projectLocalisedPathFor(file));
                 }
             }
 
-            if (!foundSubstepsFolder) {
+            final String substepsFolder = defaultSubstepsLocationFinder.to(project);
+            if (substepsFolder != null) {
+                configuration.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, substepsFolder);
+            } else {
                 configuration.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, "");
             }
-
         }
     }
 
@@ -184,8 +194,10 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             public void modifyText(final ModifyEvent evt) {
                 validatePage();
                 updateLaunchConfigurationDialog();
-                substepsLocationButton.setEnabled(projectText.getText().length() > 0);
-                addBeforeAndAfterProcessorButton.setEnabled(projectText.getText().length() > 0);
+                final boolean isProjectSpecified = projectText.getText().length() > 0;
+                featureFileLocationButton.setEnabled(isProjectSpecified);
+                substepsLocationButton.setEnabled(isProjectSpecified);
+                addBeforeAndAfterProcessorButton.setEnabled(isProjectSpecified);
             }
         });
 
@@ -195,7 +207,41 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             @Override
             public void widgetSelected(final SelectionEvent evt) {
                 final String projectName = handleProjectButtonSelected();
-                projectText.setText(projectName);
+                if (projectName != null && !projectName.isEmpty()) {
+                    projectText.setText(projectName);
+                }
+            }
+        });
+    }
+
+
+    private void createFeatureFileConfigComponent(final Composite comp) {
+        final Label featureFileLocationLabel = new Label(comp, SWT.NONE);
+        featureFileLocationLabel.setText(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_label_feature_location);
+        final GridData gd = new GridData();
+        gd.horizontalIndent = 25;
+        featureFileLocationLabel.setLayoutData(gd);
+
+        featureFileLocationText = new Text(comp, SWT.SINGLE | SWT.BORDER);
+        featureFileLocationText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        featureFileLocationText.addModifyListener(new ModifyListener() {
+            @Override
+            public void modifyText(final ModifyEvent evt) {
+                validatePage();
+                updateLaunchConfigurationDialog();
+            }
+        });
+
+        featureFileLocationButton = new Button(comp, SWT.PUSH);
+        featureFileLocationButton
+                .setText(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_browse_feature_location);
+        featureFileLocationButton.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent evt) {
+                final String newLocation = handleFeatureFileLocationButtonSelected();
+                if (newLocation != null && !newLocation.isEmpty()) {
+                    featureFileLocationText.setText(newLocation);
+                }
             }
         });
     }
@@ -224,7 +270,9 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             @Override
             public void widgetSelected(final SelectionEvent evt) {
                 final String newLocation = handleSubstepsLocationButtonSelected();
-                substepsLocationText.setText(newLocation);
+                if (newLocation != null && !newLocation.isEmpty()) {
+                    substepsLocationText.setText(newLocation);
+                }
             }
         });
     }
@@ -304,8 +352,20 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             return "";
         }
 
-        containerElement = project;
         return project.getElementName();
+    }
+
+
+    /*
+     * Show a dialog that lets the user select a folder or substeps file.
+     */
+    private String handleFeatureFileLocationButtonSelected() {
+        final IResource resource = chooseFeatureFileResource();
+        if (resource == null) {
+            return "";
+        }
+
+        return projectLocalisedPathFor(resource);
     }
 
 
@@ -318,7 +378,7 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             return "";
         }
 
-        return resource.getFullPath().removeFirstSegments(1).toOSString();
+        return projectLocalisedPathFor(resource);
     }
 
 
@@ -392,6 +452,45 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
     }
 
 
+    private IResource chooseFeatureFileResource() {
+
+        final ILabelProvider labelProvider = new WorkbenchLabelProvider();
+        final ElementTreeSelectionDialog dialog = new ElementTreeSelectionDialog(getShell(), labelProvider,
+                new BaseWorkbenchContentProvider());
+        dialog.setTitle(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_featurefiledialog_title);
+        dialog.setMessage(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_featurefiledialog_message);
+        dialog.setInput(project());
+        dialog.setAllowMultiple(false);
+        dialog.setValidator(new ISelectionStatusValidator() {
+
+            @Override
+            public IStatus validate(final Object[] selection) {
+                if (selection.length > 0) {
+                    final Object item = selection[0];
+                    if (item instanceof IFile) {
+                        final IFile file = (IFile) item;
+                        if ("feature".equalsIgnoreCase(file.getFileExtension())) {
+                            return new Status(IStatus.OK, FeatureRunnerPlugin.PLUGIN_ID, "");
+                        }
+                    }
+                }
+                return new Status(IStatus.ERROR, FeatureRunnerPlugin.PLUGIN_ID,
+                        SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_error_notFeatureFile);
+            }
+        });
+
+        if (dialog.open() == Window.OK) {
+            return (IResource) dialog.getFirstResult();
+        }
+        return null;
+    }
+
+
+    private IProject project() {
+        return ResourcesPlugin.getWorkspace().getRoot().getProject(projectText.getText().trim());
+    }
+
+
     private IResource chooseSubstepsResource() {
 
         final ILabelProvider labelProvider = new WorkbenchLabelProvider();
@@ -399,7 +498,7 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
                 new BaseWorkbenchContentProvider());
         dialog.setTitle(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_substepsdialog_title);
         dialog.setMessage(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_substepsdialog_message);
-        dialog.setInput(containerElement.getJavaProject().getProject());
+        dialog.setInput(project());
         dialog.setAllowMultiple(false);
         dialog.setValidator(new ISelectionStatusValidator() {
 
@@ -461,6 +560,14 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
                 return;
             }
             if (!validSubstepsFile(project, substepsFileName)) {
+                return;
+            }
+            final String featureFileName = featureFileLocationText.getText().trim();
+            if (featureFileName.length() == 0) {
+                setErrorMessage(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_error_featurefilenotdefined);
+                return;
+            }
+            if (!validFeatureFile(project, featureFileName)) {
                 return;
             }
         } catch (final CoreException e) {
@@ -541,6 +648,29 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
     }
 
 
+    /**
+     * Determine if a feature file exists under project with name
+     * 
+     * @param project
+     *            The project where substeps lives
+     * @param featureFileName
+     *            file name, relative to project
+     * @return true if feature file exists, otherwise false
+     */
+    private boolean validFeatureFile(final IProject project, final String featureFileName) {
+        if (featureFileName.endsWith(".feature")) {
+            if (!project.getFile(featureFileName).exists()) {
+                setErrorMessage(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_error_featurefilenotexists);
+                return false;
+            }
+        } else {
+            setErrorMessage(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_error_notFeatureFile);
+            return false;
+        }
+        return true;
+    }
+
+
     private String getConfigAttribute(final ILaunchConfiguration config, final String configName) {
         try {
             return config.getAttribute(configName, "");
@@ -552,12 +682,12 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
 
 
     /*
-     * Returns the current Java element context from which to initialize default
-     * settings, or <code>null</code> if none.
+     * Returns the current resource element context from which to initialize
+     * default settings, or <code>null</code> if none.
      * 
-     * @return Java element context.
+     * @return resource context.
      */
-    private IJavaElement getContext() {
+    private IResource getContext() {
         final IWorkbenchWindow activeWorkbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         if (activeWorkbenchWindow == null) {
             return null;
@@ -569,27 +699,30 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
                 final IStructuredSelection ss = (IStructuredSelection) selection;
                 if (!ss.isEmpty()) {
                     final Object obj = ss.getFirstElement();
-                    if (obj instanceof IJavaElement) {
-                        return (IJavaElement) obj;
-                    }
+
                     if (obj instanceof IResource) {
-                        IJavaElement je = JavaCore.create((IResource) obj);
-                        if (je == null) {
-                            final IProject pro = ((IResource) obj).getProject();
-                            je = JavaCore.create(pro);
-                        }
-                        if (je != null) {
-                            return je;
-                        }
+                        return (IResource) obj;
                     }
                 }
             }
             final IEditorPart part = page.getActiveEditor();
             if (part != null) {
                 final IEditorInput input = part.getEditorInput();
-                return (IJavaElement) input.getAdapter(IJavaElement.class);
+                return (IResource) input.getAdapter(IResource.class);
             }
         }
         return null;
+    }
+
+
+    /**
+     * Convert a resource to its os-specific project localised path string
+     * 
+     * @param resource
+     *            to be localised
+     * @return localised path
+     */
+    private String projectLocalisedPathFor(final IResource resource) {
+        return resource.getFullPath().removeFirstSegments(1).toOSString();
     }
 }
