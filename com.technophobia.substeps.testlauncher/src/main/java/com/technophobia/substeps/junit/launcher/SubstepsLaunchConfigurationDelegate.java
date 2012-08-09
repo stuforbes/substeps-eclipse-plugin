@@ -8,6 +8,7 @@ import java.io.OutputStreamWriter;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -282,6 +283,7 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
         final String vmArgs = getVMArguments(configuration);
         final ExecutionArguments execArgs = new ExecutionArguments(vmArgs, pgmArgs);
         vmArguments.addAll(Arrays.asList(execArgs.getVMArgumentsArray()));
+        vmArguments.addAll(substepsVMArguments(configuration));
         programArguments.addAll(Arrays.asList(execArgs.getProgramArgumentsArray()));
 
         final String testFailureNames = configuration.getAttribute(
@@ -327,6 +329,27 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
         if (testFailureNames.length() > 0) {
             programArguments.add("-testfailures"); //$NON-NLS-1$
             programArguments.add(testFailureNames);
+        }
+    }
+
+
+    private Collection<String> substepsVMArguments(final ILaunchConfiguration configuration) {
+        final Collection<String> results = new ArrayList<String>();
+        results.add("-DsubstepsFile="
+                + getConfigAttribute(configuration, SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE));
+        results.add("-DbeforeAndAfterProcessors="
+                + getConfigAttribute(configuration,
+                        SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS));
+        return results;
+    }
+
+
+    private String getConfigAttribute(final ILaunchConfiguration configuration, final String configName) {
+        try {
+            return configuration.getAttribute(configName, "");
+        } catch (final CoreException e) {
+            FeatureRunnerPlugin.log(e);
+            return "";
         }
     }
 

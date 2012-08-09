@@ -11,6 +11,11 @@ import com.technophobia.substeps.FeatureRunnerPlugin;
 
 public class SubstepsLaunchConfigurationConstants {
 
+    public static final String ATTR_FEATURE_PROJECT = FeatureRunnerPlugin.PLUGIN_ID + ".FEATURE_PROJECT";
+    public static final String ATTR_SUBSTEPS_FILE = FeatureRunnerPlugin.PLUGIN_ID + ".SUBSTEPS_FILE";
+    public static final String ATTR_BEFORE_AND_AFTER_PROCESSORS = FeatureRunnerPlugin.PLUGIN_ID
+            + ".BEFORE_AND_AFTER_PROCESSORS";
+
     public static final String ATTR_FAILURES_NAMES = FeatureRunnerPlugin.PLUGIN_ID + ".FAILURENAMES";
     public static final String ATTR_PORT = FeatureRunnerPlugin.PLUGIN_ID + ".PORT";
     public static final String ATTR_TEST_RUNNER_KIND = FeatureRunnerPlugin.PLUGIN_ID + ".TEST_KIND";
