@@ -25,6 +25,7 @@ import org.eclipse.jdt.core.search.IJavaSearchConstants;
 import org.eclipse.jdt.core.search.IJavaSearchScope;
 import org.eclipse.jdt.internal.core.search.JavaSearchScope;
 import org.eclipse.jdt.internal.ui.dialogs.OpenTypeSelectionDialog;
+import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.ui.JavaElementLabelProvider;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelection;
@@ -57,8 +58,10 @@ import org.eclipse.ui.model.BaseWorkbenchContentProvider;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
 
 import com.technophobia.eclipse.launcher.config.SubstepsLaunchConfigurationConstants;
+import com.technophobia.eclipse.transformer.ProjectToJavaProjectTransformer;
 import com.technophobia.eclipse.transformer.Transformer;
 import com.technophobia.substeps.FeatureRunnerPlugin;
+import com.technophobia.substeps.junit.launcher.config.SubstepsLaunchConfigWorkingCopyDecorator;
 import com.technophobia.substeps.junit.ui.SubstepsFeatureMessages;
 
 public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
@@ -77,10 +80,12 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
     private Button featureFileLocationButton;
 
     private final Transformer<IProject, String> defaultSubstepsLocationFinder;
+    private final Transformer<IProject, IJavaProject> projectToJavaProjectTransformer;
 
 
     public SubstepsArgumentTab() {
         this.defaultSubstepsLocationFinder = new DefaultSubstepsLocationFinder();
+        this.projectToJavaProjectTransformer = new ProjectToJavaProjectTransformer();
     }
 
 
@@ -134,11 +139,16 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
     @Override
     public void performApply(final ILaunchConfigurationWorkingCopy config) {
         if (projectText != null) {
-            config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, projectText.getText().trim());
+            final String projectName = projectText.getText().trim();
+            config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, projectName);
+            config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, projectName);
         }
         if (featureFileLocationText != null) {
             config.setAttribute(SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE, featureFileLocationText.getText()
                     .trim());
+
+            config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS,
+                    vmArgs(featureFileLocationText.getText().trim(), project()));
         }
         if (substepsLocationText != null) {
             config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, substepsLocationText.getText()
@@ -152,6 +162,14 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             sb.append(";");
         }
         config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS, sb.toString());
+
+        config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME,
+                SubstepsLaunchConfigWorkingCopyDecorator.FEATURE_TEST);
+        config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_KEEPRUNNING, false);
+        config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_TEST_CONTAINER, "");
+        config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_TEST_RUNNER_KIND,
+                SubstepsLaunchConfigurationConstants.JUNIT4_TEST_KIND_ID);
+
     }
 
 
@@ -724,5 +742,27 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
      */
     private String projectLocalisedPathFor(final IResource resource) {
         return resource.getFullPath().removeFirstSegments(1).toOSString();
+    }
+
+
+    private String vmArgs(final String filePath, final IProject project) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("-DsubstepsFeatureFile=");
+        sb.append(project.getRawLocation().addTrailingSeparator().append(filePath).toOSString());
+        sb.append(" -DoutputFolder=");
+        sb.append(outputFolderFor(project));
+        return sb.toString();
+    }
+
+
+    private String outputFolderFor(final IProject project) {
+        try {
+            final IPath outputLocation = projectToJavaProjectTransformer.to(project).getOutputLocation();
+            // remove project name
+            return outputLocation.removeFirstSegments(1).toOSString();
+        } catch (final JavaModelException ex) {
+            FeatureRunnerPlugin.log(ex);
+            return null;
+        }
     }
 }

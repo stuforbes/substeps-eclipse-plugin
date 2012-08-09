@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -29,6 +30,7 @@ import org.eclipse.jdt.core.IMember;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.launching.AbstractJavaLaunchConfigurationDelegate;
 import org.eclipse.jdt.launching.ExecutionArguments;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
@@ -335,12 +337,48 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
 
     private Collection<String> substepsVMArguments(final ILaunchConfiguration configuration) {
         final Collection<String> results = new ArrayList<String>();
-        results.add("-DsubstepsFile="
-                + getConfigAttribute(configuration, SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE));
-        results.add("-DbeforeAndAfterProcessors="
-                + getConfigAttribute(configuration,
-                        SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS));
+        final IProject project = projectFromConfig(configuration);
+
+        if (project != null) {
+            results.add("-DsubstepsFeatureFile="
+                    + project.getRawLocation().addTrailingSeparator()
+                            .append(getConfigAttribute(configuration, SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE))
+                            .toOSString());
+
+            results.add("-DsubstepsFile="
+                    + project
+                            .getRawLocation()
+                            .addTrailingSeparator()
+                            .append(getConfigAttribute(configuration,
+                                    SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE)).toOSString());
+
+            results.add("-DbeforeAndAfterProcessors="
+                    + getConfigAttribute(configuration,
+                            SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS));
+
+            try {
+                results.add("-DoutputFolder="
+                        + getJavaProject(configuration).getOutputLocation().removeFirstSegments(1).toOSString());
+            } catch (final JavaModelException e) {
+                FeatureRunnerPlugin.log(e);
+            } catch (final CoreException e) {
+                FeatureRunnerPlugin.log(e);
+            }
+
+            // results.add(getConfigAttribute(configuration,
+            // IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS));
+        }
         return results;
+    }
+
+
+    private IProject projectFromConfig(final ILaunchConfiguration configuration) {
+        try {
+            return getJavaProject(configuration).getProject();
+        } catch (final CoreException e) {
+            FeatureRunnerPlugin.log(e);
+            return null;
+        }
     }
 
 

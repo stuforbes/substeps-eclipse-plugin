@@ -13,10 +13,12 @@ import org.eclipse.jdt.core.JavaCore;
 import com.technophobia.substeps.model.StepImplementation;
 import com.technophobia.substeps.model.Syntax;
 import com.technophobia.substeps.render.StepImplementationRenderer;
+import com.technophobia.substeps.step.ProjectStepImplementationProvider;
 import com.technophobia.substeps.supplier.Callback1;
 import com.technophobia.substeps.supplier.Transformer;
 
-public class ProjectSpecificSuggestionProvider extends AbstractMultiProjectSuggestionProvider {
+public class ProjectSpecificSuggestionProvider extends AbstractMultiProjectSuggestionProvider implements
+        ProjectStepImplementationProvider {
 
     private final Transformer<IProject, Syntax> projectToSyntaxTransformer;
     private final StepImplementationRenderer stepRenderer;

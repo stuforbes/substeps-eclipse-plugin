@@ -5,7 +5,6 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.jdt.core.IJavaProject;
-import org.eclipse.jdt.internal.junit.launcher.JUnitLaunchConfigurationConstants;
 import org.eclipse.jdt.internal.junit.launcher.TestKindRegistry;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.jmock.Expectations;
@@ -15,6 +14,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import com.technophobia.eclipse.launcher.config.SubstepsLaunchConfigurationConstants;
 import com.technophobia.eclipse.launcher.exception.ExceptionReporter;
 import com.technophobia.eclipse.transformer.Decorator;
 import com.technophobia.eclipse.transformer.Transformer;
@@ -28,7 +28,8 @@ public class SubstepsLaunchConfigWorkingCopyDecoratorTest {
     private IResource resource;
     private IProject project;
 
-    private Transformer<IProject, IJavaProject> transformer;
+    private Transformer<IProject, IJavaProject> projectToJavaProjectTransformer;
+    private Transformer<IProject, String> projectToSubstepsFolderTransformer;
     private ExceptionReporter exceptionReporter;
 
     private Decorator<ILaunchConfigurationWorkingCopy, IResource> decorator;
@@ -42,10 +43,12 @@ public class SubstepsLaunchConfigWorkingCopyDecoratorTest {
         this.resource = context.mock(IResource.class);
         this.project = context.mock(IProject.class);
 
-        this.transformer = context.mock(Transformer.class);
+        this.projectToJavaProjectTransformer = context.mock(Transformer.class, "projectToJavaProjectTransformer");
+        this.projectToSubstepsFolderTransformer = context.mock(Transformer.class, "projectToSubstepsFolderTransformer");
         this.exceptionReporter = context.mock(ExceptionReporter.class);
 
-        this.decorator = new SubstepsLaunchConfigWorkingCopyDecorator(transformer, exceptionReporter);
+        this.decorator = new SubstepsLaunchConfigWorkingCopyDecorator(projectToJavaProjectTransformer,
+                exceptionReporter, projectToSubstepsFolderTransformer);
     }
 
 
@@ -73,11 +76,14 @@ public class SubstepsLaunchConfigWorkingCopyDecoratorTest {
                 oneOf(resourcePath).toOSString();
                 will(returnValue(pathString));
 
-                oneOf(project).getName();
+                exactly(2).of(project).getName();
                 will(returnValue("Project"));
 
-                oneOf(transformer).to(project);
+                oneOf(projectToJavaProjectTransformer).to(project);
                 will(returnValue(javaProject));
+
+                oneOf(projectToSubstepsFolderTransformer).to(project);
+                will(returnValue("substeps"));
 
                 oneOf(javaProject).getOutputLocation();
                 will(returnValue(outputFolderPath));
@@ -91,11 +97,13 @@ public class SubstepsLaunchConfigWorkingCopyDecoratorTest {
                 oneOf(workingCopy).setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME,
                         "com.technophobia.substeps.runner.runtime.DefinableFeatureTest");
                 oneOf(workingCopy).setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, "Project");
-                oneOf(workingCopy).setAttribute(JUnitLaunchConfigurationConstants.ATTR_KEEPRUNNING, false);
-                oneOf(workingCopy).setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, "");
-                oneOf(workingCopy).setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_RUNNER_KIND,
+                oneOf(workingCopy).setAttribute(SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT, "Project");
+                oneOf(workingCopy).setAttribute(SubstepsLaunchConfigurationConstants.ATTR_KEEPRUNNING, false);
+                oneOf(workingCopy).setAttribute(SubstepsLaunchConfigurationConstants.ATTR_TEST_CONTAINER, "");
+                oneOf(workingCopy).setAttribute(SubstepsLaunchConfigurationConstants.ATTR_TEST_RUNNER_KIND,
                         TestKindRegistry.JUNIT4_TEST_KIND_ID);
                 oneOf(workingCopy).setAttribute("com.technophobia.substeps.junit.featureFile", pathString);
+                oneOf(workingCopy).setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, "substeps");
                 oneOf(workingCopy).setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS,
                         "-DsubstepsFeatureFile=" + pathString + " -DoutputFolder=" + outputFolder);
             }

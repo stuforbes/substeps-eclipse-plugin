@@ -36,7 +36,7 @@ public class SubstepsLaunchConfigWorkingCopyDecorator implements Decorator<ILaun
     public void decorate(final ILaunchConfigurationWorkingCopy workingCopy, final IResource resource) {
 
         final IProject project = resource.getProject();
-        final String filePath = resource.getRawLocation().toOSString();
+        final String filePath = resource.getFullPath().removeFirstSegments(1).toOSString();
 
         workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME, FEATURE_TEST);
         workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, project.getName());
@@ -51,17 +51,8 @@ public class SubstepsLaunchConfigWorkingCopyDecorator implements Decorator<ILaun
         final String substepsFolder = substepsFolderLocator.to(project);
         workingCopy.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE,
                 substepsFolder != null ? substepsFolder : "");
-        workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, vmArgs(filePath, project));
-    }
-
-
-    private String vmArgs(final String filePath, final IProject project) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("-DsubstepsFeatureFile=");
-        sb.append(filePath);
-        sb.append(" -DoutputFolder=");
-        sb.append(outputFolderFor(project));
-        return sb.toString();
+        // workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS,
+        // vmArgs(filePath, project));
     }
 
 
