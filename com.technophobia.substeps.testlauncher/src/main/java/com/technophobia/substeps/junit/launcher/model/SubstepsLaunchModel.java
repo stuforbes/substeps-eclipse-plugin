@@ -8,7 +8,6 @@ import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 
 import com.technophobia.eclipse.launcher.config.SubstepsLaunchConfigurationConstants;
-import com.technophobia.substeps.FeatureEditorPlugin;
 import com.technophobia.substeps.junit.launcher.SubstepsFeatureLaunchShortcut;
 import com.technophobia.substeps.junit.launcher.config.SubstepsLaunchConfigWorkingCopyDecorator;
 
@@ -41,12 +40,14 @@ public class SubstepsLaunchModel implements LaunchModel {
 
         config.setAttribute(SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE, featureFile);
 
-        config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, vmArgs(featureFile, project()));
+        // config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS,
+        // vmArgs(featureFile, project()));
 
-        final Collection<String> stepImplementationClasses = FeatureEditorPlugin.instance()
-                .getStepImplementationProvider().stepImplementationClasses(project());
-        config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_STEP_IMPLEMENTATION_CLASSES,
-                createStringFrom(stepImplementationClasses));
+        // final Collection<String> stepImplementationClasses =
+        // FeatureEditorPlugin.instance()
+        // .getStepImplementationProvider().stepImplementationClasses(project());
+        // config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_STEP_IMPLEMENTATION_CLASSES,
+        // createStringFrom(stepImplementationClasses));
 
         config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, substepsFile);
 
@@ -104,14 +105,6 @@ public class SubstepsLaunchModel implements LaunchModel {
 
     private IProject project() {
         return ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-    }
-
-
-    private String vmArgs(final String filePath, final IProject project) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("-DsubstepsFeatureFile=");
-        sb.append(project.getRawLocation().addTrailingSeparator().append(filePath).toOSString());
-        return sb.toString();
     }
 
 

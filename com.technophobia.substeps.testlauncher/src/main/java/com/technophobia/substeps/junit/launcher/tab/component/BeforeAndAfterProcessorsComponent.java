@@ -1,9 +1,9 @@
 package com.technophobia.substeps.junit.launcher.tab.component;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 
 import org.eclipse.core.resources.IProject;
@@ -41,6 +41,8 @@ import com.technophobia.substeps.supplier.Supplier;
 @SuppressWarnings("restriction")
 public class BeforeAndAfterProcessorsComponent extends AbstractTabComponent {
 
+    private static final String[] DEFAULT_BEFORE_AND_AFTERS = new String[] { "com.technophobia.webdriver.substeps.runner.DefaultExecutionSetupTearDown" };
+
     private Button addBeforeAndAfterProcessorButton;
     private Button removeBeforeAndAfterProcessorButton;
     private ListViewer beforeAndAfterProcessorsList;
@@ -70,7 +72,16 @@ public class BeforeAndAfterProcessorsComponent extends AbstractTabComponent {
 
     @Override
     public void setDefaultOn(final SubstepsLaunchModel model, final IResource currentResource) {
-        model.setBeforeAndAfterProcessors(Collections.<String> emptyList());
+        final IProject project = currentResource.getProject();
+        final IJavaProject javaProject = JavaCore.create(project);
+
+        final Collection<String> beforeAndAfters = new ArrayList<String>();
+        for (final String defaultBeforeAndAfter : DEFAULT_BEFORE_AND_AFTERS) {
+            if (typeExistsInProject(defaultBeforeAndAfter, javaProject)) {
+                beforeAndAfters.add(defaultBeforeAndAfter);
+            }
+        }
+        model.setBeforeAndAfterProcessors(beforeAndAfters);
     }
 
 
@@ -221,5 +232,16 @@ public class BeforeAndAfterProcessorsComponent extends AbstractTabComponent {
 
     private IJavaProject getJavaProject() {
         return JavaCore.create(project());
+    }
+
+
+    private boolean typeExistsInProject(final String typeStr, final IJavaProject javaProject) {
+        try {
+            final IType type = javaProject.findType(typeStr);
+            return type != null && type.exists();
+        } catch (final JavaModelException e) {
+            FeatureRunnerPlugin.log(e);
+            return false;
+        }
     }
 }

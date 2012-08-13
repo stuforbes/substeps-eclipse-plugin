@@ -113,6 +113,7 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             projectComponent.setDefaultOn(launchModel, currentResource);
             featureFileComponent.setDefaultOn(launchModel, currentResource);
             substepsComponent.setDefaultOn(launchModel, currentResource);
+            beforeAndAfterProcessorsComponent.setDefaultOn(launchModel, currentResource);
         }
         launchModel.saveTo(configuration);
     }

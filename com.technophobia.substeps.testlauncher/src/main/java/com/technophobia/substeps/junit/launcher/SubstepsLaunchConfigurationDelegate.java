@@ -39,6 +39,7 @@ import org.eclipse.jdt.launching.SocketUtil;
 import org.eclipse.jdt.launching.VMRunnerConfiguration;
 
 import com.technophobia.eclipse.launcher.config.SubstepsLaunchConfigurationConstants;
+import com.technophobia.substeps.FeatureEditorPlugin;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.junit.launcher.config.SubstepsLaunchConfigWorkingCopyDecorator;
 import com.technophobia.substeps.junit.ui.SubstepsFeatureMessages;
@@ -356,9 +357,11 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
                     + getConfigAttribute(configuration,
                             SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS));
 
-            results.add("-DsubstepsImplClasses="
-                    + getConfigAttribute(configuration,
-                            SubstepsLaunchConfigurationConstants.ATTR_STEP_IMPLEMENTATION_CLASSES));
+            final Collection<String> stepImplementationClasses = FeatureEditorPlugin.instance()
+                    .getStepImplementationProvider().stepImplementationClasses(project);
+            results.add("-DsubstepsImplClasses=" + createStringFrom(stepImplementationClasses));
+
+            results.add("-DsubstepsTags=--unimplemented");
 
             try {
                 results.add("-DoutputFolder="
@@ -519,5 +522,17 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
     @Override
     protected void abort(final String message, final Throwable exception, final int code) throws CoreException {
         throw new CoreException(new Status(IStatus.ERROR, FeatureRunnerPlugin.PLUGIN_ID, code, message, exception));
+    }
+
+
+    private String createStringFrom(final Collection<String> collection) {
+        final StringBuilder sb = new StringBuilder();
+        if (collection != null) {
+            for (final String stepImpl : collection) {
+                sb.append(stepImpl);
+                sb.append(";");
+            }
+        }
+        return sb.toString();
     }
 }
