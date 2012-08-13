@@ -117,9 +117,11 @@ public class SubstepsLaunchModel implements LaunchModel {
 
     private String createStringFrom(final Collection<String> collection) {
         final StringBuilder sb = new StringBuilder();
-        for (final String stepImpl : collection) {
-            sb.append(stepImpl);
-            sb.append(";");
+        if (collection != null) {
+            for (final String stepImpl : collection) {
+                sb.append(stepImpl);
+                sb.append(";");
+            }
         }
         return sb.toString();
     }

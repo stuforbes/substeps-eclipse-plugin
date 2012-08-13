@@ -54,7 +54,11 @@ public class BeforeAndAfterProcessorsComponent extends AbstractTabComponent {
     @Override
     public void initializeFrom(final SubstepsLaunchModel model) {
         final Collection<String> beforeAndAfterProcessors = model.getBeforeAndAfterProcessors();
-        beforeAndAfterProcessorsList.add(beforeAndAfterProcessors.toArray());
+        if (!beforeAndAfterProcessors.isEmpty()) {
+            beforeAndAfterProcessorsList.getList().removeAll();
+            beforeAndAfterProcessorsList.add(beforeAndAfterProcessors.toArray(new String[beforeAndAfterProcessors
+                    .size()]));
+        }
     }
 
 
@@ -152,6 +156,7 @@ public class BeforeAndAfterProcessorsComponent extends AbstractTabComponent {
                 final String newType = handleAddBeforeAndAfterProcessor();
                 if (newType != null) {
                     beforeAndAfterProcessorsList.add(newType);
+                    onChange();
                 }
             }
         });
@@ -167,6 +172,7 @@ public class BeforeAndAfterProcessorsComponent extends AbstractTabComponent {
                 final Iterator<?> it = selection.iterator();
                 while (it.hasNext()) {
                     beforeAndAfterProcessorsList.remove(it.next());
+                    onChange();
                 }
             }
         });

@@ -48,9 +48,13 @@ public class SubstepsLaunchModelFactory implements LaunchModelFactory {
     private Collection<String> beforeAndAfterProcessorsFrom(final ILaunchConfiguration config) {
         final String beforeAndAfterProcessorsStr = getConfigAttribute(config,
                 SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS);
-        final String[] split = beforeAndAfterProcessorsStr.split(";");
-        final Collection<String> beforeAndAfterProcessors = Arrays.asList(split);
-        return beforeAndAfterProcessors;
+        if (beforeAndAfterProcessorsStr.isEmpty()) {
+            return Collections.emptyList();
+        } else {
+            final String[] split = beforeAndAfterProcessorsStr.split(";");
+            final Collection<String> beforeAndAfterProcessors = Arrays.asList(split);
+            return beforeAndAfterProcessors;
+        }
     }
 
 
