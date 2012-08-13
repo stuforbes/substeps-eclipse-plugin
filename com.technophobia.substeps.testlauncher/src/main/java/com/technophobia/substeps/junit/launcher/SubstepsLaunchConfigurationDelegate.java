@@ -356,6 +356,10 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
                     + getConfigAttribute(configuration,
                             SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS));
 
+            results.add("-DsubstepsImplClasses="
+                    + getConfigAttribute(configuration,
+                            SubstepsLaunchConfigurationConstants.ATTR_STEP_IMPLEMENTATION_CLASSES));
+
             try {
                 results.add("-DoutputFolder="
                         + getJavaProject(configuration).getOutputLocation().removeFirstSegments(1).toOSString());

@@ -2,7 +2,7 @@ package com.technophobia.substeps.junit.launcher;
 
 import org.eclipse.core.resources.IProject;
 
-import com.technophobia.eclipse.transformer.Transformer;
+import com.technophobia.substeps.supplier.Transformer;
 
 public class DefaultSubstepsLocationFinder implements Transformer<IProject, String> {
 
@@ -11,7 +11,7 @@ public class DefaultSubstepsLocationFinder implements Transformer<IProject, Stri
 
 
     @Override
-    public String to(final IProject project) {
+    public String from(final IProject project) {
         for (final String defaultSubstepsFolder : DEFAULT_SUBSTEPS_FOLDER_LOCATIONS) {
             if (project.getFolder(defaultSubstepsFolder).exists()) {
                 return defaultSubstepsFolder;

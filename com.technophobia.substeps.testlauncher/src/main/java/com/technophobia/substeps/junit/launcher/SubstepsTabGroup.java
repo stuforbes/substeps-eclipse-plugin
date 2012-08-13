@@ -10,6 +10,8 @@ import org.eclipse.jdt.debug.ui.launchConfigurations.JavaArgumentsTab;
 import org.eclipse.jdt.debug.ui.launchConfigurations.JavaClasspathTab;
 import org.eclipse.jdt.debug.ui.launchConfigurations.JavaJRETab;
 
+import com.technophobia.substeps.junit.launcher.tab.SubstepsArgumentTab;
+
 public class SubstepsTabGroup extends AbstractLaunchConfigurationTabGroup {
 
     @Override

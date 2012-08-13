@@ -2,7 +2,9 @@ package com.technophobia.substeps.step;
 
 import java.util.Collection;
 
-public interface ProjectStepImplementationProvider extends ProjectSuggestionProvider {
+import org.eclipse.core.resources.IProject;
 
-    Collection<Class<?>> stepImplementationClasses();
+public interface ProjectStepImplementationProvider {
+
+    Collection<String> stepImplementationClasses(IProject project);
 }

@@ -60,8 +60,22 @@ public class ProjectSpecificSuggestionProvider extends AbstractMultiProjectSugge
 
 
     @Override
+    public Collection<String> stepImplementationClasses(final IProject project) {
+        final Syntax syntax = projectToSyntaxTransformer.from(project);
+
+        final List<StepImplementation> stepImplementations = syntax.getStepImplementations();
+
+        final Collection<String> classes = new HashSet<String>();
+        for (final StepImplementation stepImplementation : stepImplementations) {
+            classes.add(stepImplementation.getImplementedIn().getName());
+        }
+        return classes;
+    }
+
+
+    @Override
     protected Collection<String> findStepImplementationsFor(final IProject project) {
-        final Syntax syntax = projectToSyntaxTransformer.to(project);
+        final Syntax syntax = projectToSyntaxTransformer.from(project);
 
         final List<StepImplementation> stepImplementations = syntax.getStepImplementations();
         final Collection<String> suggestions = new ArrayList<String>(stepImplementations.size());
