@@ -81,12 +81,15 @@ public class SubstepsFileComponent extends AbstractTabComponent {
     public void create(final Composite comp) {
         final Label substepsLocationLabel = new Label(comp, SWT.NONE);
         substepsLocationLabel.setText(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_label_substeps_location);
-        final GridData gd = new GridData();
+        GridData gd = new GridData();
         gd.horizontalIndent = 25;
+        gd.verticalIndent = 5;
         substepsLocationLabel.setLayoutData(gd);
 
         substepsLocationText = new Text(comp, SWT.SINGLE | SWT.BORDER);
-        substepsLocationText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.verticalIndent = 5;
+        substepsLocationText.setLayoutData(gd);
         substepsLocationText.addModifyListener(new ModifyListener() {
             @Override
             public void modifyText(final ModifyEvent evt) {

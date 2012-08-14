@@ -102,12 +102,15 @@ public class ProjectComponent extends AbstractTabComponent implements Supplier<I
     public void create(final Composite comp) {
         final Label projectLabel = new Label(comp, SWT.NONE);
         projectLabel.setText(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_label_project_location);
-        final GridData gd = new GridData();
+        GridData gd = new GridData();
         gd.horizontalIndent = 25;
+        gd.verticalIndent = 5;
         projectLabel.setLayoutData(gd);
 
         projectText = new Text(comp, SWT.SINGLE | SWT.BORDER);
-        projectText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.verticalIndent = 5;
+        projectText.setLayoutData(gd);
         projectText.addModifyListener(new ModifyListener() {
             @Override
             public void modifyText(final ModifyEvent evt) {

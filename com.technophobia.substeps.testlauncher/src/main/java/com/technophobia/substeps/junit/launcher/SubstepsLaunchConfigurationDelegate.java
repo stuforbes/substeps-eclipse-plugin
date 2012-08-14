@@ -353,10 +353,6 @@ public class SubstepsLaunchConfigurationDelegate extends AbstractJavaLaunchConfi
                             .append(getConfigAttribute(configuration,
                                     SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE)).toOSString());
 
-            results.add("-DbeforeAndAfterProcessors="
-                    + getConfigAttribute(configuration,
-                            SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS));
-
             final Collection<String> stepImplementationClasses = FeatureEditorPlugin.instance()
                     .getStepImplementationProvider().stepImplementationClasses(project);
             results.add("-DsubstepsImplClasses=" + createStringFrom(stepImplementationClasses));

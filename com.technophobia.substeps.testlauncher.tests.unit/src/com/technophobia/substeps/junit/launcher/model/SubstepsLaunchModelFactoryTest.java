@@ -1,9 +1,7 @@
 package com.technophobia.substeps.junit.launcher.model;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -77,7 +75,6 @@ public class SubstepsLaunchModelFactoryTest {
         assertThat(substepsLaunchModel.getProjectName(), is("a-project"));
         assertThat(substepsLaunchModel.getFeatureFile(), is("/feature"));
         assertThat(substepsLaunchModel.getSubstepsFile(), is("/substeps"));
-        assertEquals(0, substepsLaunchModel.getBeforeAndAfterProcessors().size());
     }
 
 
@@ -95,9 +92,6 @@ public class SubstepsLaunchModelFactoryTest {
 
                 oneOf(config).getAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, "");
                 will(returnValue("/substeps"));
-
-                oneOf(config).getAttribute(SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS, "");
-                will(returnValue("processor1;processor2;processor3"));
             }
         });
 
@@ -108,8 +102,5 @@ public class SubstepsLaunchModelFactoryTest {
         assertThat(substepsLaunchModel.getProjectName(), is("a-project"));
         assertThat(substepsLaunchModel.getFeatureFile(), is("/feature"));
         assertThat(substepsLaunchModel.getSubstepsFile(), is("/substeps"));
-        assertEquals(3, substepsLaunchModel.getBeforeAndAfterProcessors().size());
-        assertThat(substepsLaunchModel.getBeforeAndAfterProcessors(),
-                hasItems("processor1", "processor2", "processor3"));
     }
 }

@@ -23,7 +23,6 @@ import com.technophobia.substeps.junit.launcher.DefaultSubstepsLocationFinder;
 import com.technophobia.substeps.junit.launcher.model.LaunchModelFactory;
 import com.technophobia.substeps.junit.launcher.model.SubstepsLaunchModel;
 import com.technophobia.substeps.junit.launcher.model.SubstepsLaunchModelFactory;
-import com.technophobia.substeps.junit.launcher.tab.component.BeforeAndAfterProcessorsComponent;
 import com.technophobia.substeps.junit.launcher.tab.component.FeatureFileComponent;
 import com.technophobia.substeps.junit.launcher.tab.component.ProjectComponent;
 import com.technophobia.substeps.junit.launcher.tab.component.SubstepsFileComponent;
@@ -34,7 +33,6 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
     private final TabComponent projectComponent;
     private final TabComponent featureFileComponent;
     private final TabComponent substepsComponent;
-    private final TabComponent beforeAndAfterProcessorsComponent;
 
     private final LaunchModelFactory launchModelFactory;
 
@@ -48,11 +46,9 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         this.projectComponent = pc;
         this.featureFileComponent = new FeatureFileComponent(onChangeCallback, pc);
         this.substepsComponent = new SubstepsFileComponent(onChangeCallback, pc);
-        this.beforeAndAfterProcessorsComponent = new BeforeAndAfterProcessorsComponent(onChangeCallback, pc);
 
         projectComponent.addDependentTabComponent(featureFileComponent);
         projectComponent.addDependentTabComponent(substepsComponent);
-        projectComponent.addDependentTabComponent(beforeAndAfterProcessorsComponent);
     }
 
 
@@ -69,7 +65,6 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         projectComponent.create(comp);
         featureFileComponent.create(comp);
         substepsComponent.create(comp);
-        beforeAndAfterProcessorsComponent.create(comp);
     }
 
 
@@ -79,7 +74,6 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         projectComponent.initializeFrom(model);
         featureFileComponent.initializeFrom(model);
         substepsComponent.initializeFrom(model);
-        beforeAndAfterProcessorsComponent.initializeFrom(model);
 
         validatePage();
     }
@@ -97,7 +91,6 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         projectComponent.saveTo(launchModel);
         featureFileComponent.saveTo(launchModel);
         substepsComponent.saveTo(launchModel);
-        beforeAndAfterProcessorsComponent.saveTo(launchModel);
 
         launchModel.saveTo(config);
     }
@@ -114,7 +107,6 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
             projectComponent.setDefaultOn(launchModel, currentResource);
             featureFileComponent.setDefaultOn(launchModel, currentResource);
             substepsComponent.setDefaultOn(launchModel, currentResource);
-            beforeAndAfterProcessorsComponent.setDefaultOn(launchModel, currentResource);
         }
         launchModel.saveTo(configuration);
     }
@@ -144,7 +136,6 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         if (errorMessages.isEmpty()) {
             featureFileComponent.validate(errorMessages);
             substepsComponent.validate(errorMessages);
-            beforeAndAfterProcessorsComponent.validate(errorMessages);
         }
 
         if (!errorMessages.isEmpty()) {

@@ -1,9 +1,5 @@
 package com.technophobia.substeps.junit.launcher.model;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -30,7 +26,7 @@ public class SubstepsLaunchModelFactory implements LaunchModelFactory {
         final String filePath = resource.getFullPath().removeFirstSegments(1).toOSString();
         final String substepsFolder = substepsFolderLocator.from(project);
 
-        return new SubstepsLaunchModel(project.getName(), filePath, substepsFolder, Collections.<String> emptyList());
+        return new SubstepsLaunchModel(project.getName(), filePath, substepsFolder);
     }
 
 
@@ -40,21 +36,7 @@ public class SubstepsLaunchModelFactory implements LaunchModelFactory {
         final String featureFile = getConfigAttribute(config, SubstepsFeatureLaunchShortcut.ATTR_FEATURE_FILE);
         final String substepsFile = getConfigAttribute(config, SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE);
 
-        final Collection<String> beforeAndAfterProcessors = beforeAndAfterProcessorsFrom(config);
-        return new SubstepsLaunchModel(projectName, featureFile, substepsFile, beforeAndAfterProcessors);
-    }
-
-
-    private Collection<String> beforeAndAfterProcessorsFrom(final ILaunchConfiguration config) {
-        final String beforeAndAfterProcessorsStr = getConfigAttribute(config,
-                SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS);
-        if (beforeAndAfterProcessorsStr.isEmpty()) {
-            return Collections.emptyList();
-        } else {
-            final String[] split = beforeAndAfterProcessorsStr.split(";");
-            final Collection<String> beforeAndAfterProcessors = Arrays.asList(split);
-            return beforeAndAfterProcessors;
-        }
+        return new SubstepsLaunchModel(projectName, featureFile, substepsFile);
     }
 
 

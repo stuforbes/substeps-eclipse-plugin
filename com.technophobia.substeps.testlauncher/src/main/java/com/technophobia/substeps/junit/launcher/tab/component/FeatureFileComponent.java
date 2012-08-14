@@ -83,12 +83,15 @@ public class FeatureFileComponent extends AbstractTabComponent {
     public void create(final Composite comp) {
         final Label featureFileLocationLabel = new Label(comp, SWT.NONE);
         featureFileLocationLabel.setText(SubstepsFeatureMessages.SubstepsLaunchConfigurationTab_label_feature_location);
-        final GridData gd = new GridData();
+        GridData gd = new GridData();
         gd.horizontalIndent = 25;
+        gd.verticalIndent = 5;
         featureFileLocationLabel.setLayoutData(gd);
 
         featureFileLocationText = new Text(comp, SWT.SINGLE | SWT.BORDER);
-        featureFileLocationText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.verticalIndent = 5;
+        featureFileLocationText.setLayoutData(gd);
         featureFileLocationText.addModifyListener(new ModifyListener() {
             @Override
             public void modifyText(final ModifyEvent evt) {

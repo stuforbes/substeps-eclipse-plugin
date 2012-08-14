@@ -1,9 +1,5 @@
 package com.technophobia.substeps.junit.launcher.model;
 
-import java.util.Collection;
-
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 
@@ -16,7 +12,6 @@ public class SubstepsLaunchModel implements LaunchModel {
     private String projectName;
     private String featureFile;
     private String substepsFile;
-    private Collection<String> beforeAndAfterProcessors;
 
 
     public SubstepsLaunchModel() {
@@ -24,12 +19,10 @@ public class SubstepsLaunchModel implements LaunchModel {
     }
 
 
-    public SubstepsLaunchModel(final String projectName, final String featureFile, final String substepsFile,
-            final Collection<String> beforeAndAfterProcessors) {
+    public SubstepsLaunchModel(final String projectName, final String featureFile, final String substepsFile) {
         this.projectName = projectName;
         this.featureFile = featureFile;
         this.substepsFile = substepsFile;
-        this.beforeAndAfterProcessors = beforeAndAfterProcessors;
     }
 
 
@@ -50,9 +43,6 @@ public class SubstepsLaunchModel implements LaunchModel {
         // createStringFrom(stepImplementationClasses));
 
         config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_SUBSTEPS_FILE, substepsFile);
-
-        config.setAttribute(SubstepsLaunchConfigurationConstants.ATTR_BEFORE_AND_AFTER_PROCESSORS,
-                createStringFrom(beforeAndAfterProcessors));
 
         config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME,
                 SubstepsLaunchConfigWorkingCopyDecorator.FEATURE_TEST);
@@ -91,32 +81,4 @@ public class SubstepsLaunchModel implements LaunchModel {
     public void setSubstepsFile(final String substepsFile) {
         this.substepsFile = substepsFile;
     }
-
-
-    public Collection<String> getBeforeAndAfterProcessors() {
-        return beforeAndAfterProcessors;
-    }
-
-
-    public void setBeforeAndAfterProcessors(final Collection<String> beforeAndAfterProcessors) {
-        this.beforeAndAfterProcessors = beforeAndAfterProcessors;
-    }
-
-
-    private IProject project() {
-        return ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-    }
-
-
-    private String createStringFrom(final Collection<String> collection) {
-        final StringBuilder sb = new StringBuilder();
-        if (collection != null) {
-            for (final String stepImpl : collection) {
-                sb.append(stepImpl);
-                sb.append(";");
-            }
-        }
-        return sb.toString();
-    }
-
 }
