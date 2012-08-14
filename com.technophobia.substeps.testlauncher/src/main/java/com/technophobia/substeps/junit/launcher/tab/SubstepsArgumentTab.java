@@ -110,6 +110,7 @@ public class SubstepsArgumentTab extends AbstractLaunchConfigurationTab {
         final SubstepsLaunchModel launchModel = new SubstepsLaunchModel();
 
         if (currentResource != null) {
+            configuration.rename(currentResource.getName());
             projectComponent.setDefaultOn(launchModel, currentResource);
             featureFileComponent.setDefaultOn(launchModel, currentResource);
             substepsComponent.setDefaultOn(launchModel, currentResource);
