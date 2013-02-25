@@ -5,11 +5,19 @@
 	<extension
          point="org.eclipse.ui.views">
       <view
+            name="Substeps-old"
+            icon="icons/full/eview16/substeps.gif"
+            category="org.eclipse.jdt.ui.java"
+            fastViewWidthRatio="0.40"
+            class="com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPartOld"
+            id="com.technophobia.substeps.runner.SubstepsResultViewOld">
+      </view>
+      <view
             name="%View.label"
             icon="icons/full/eview16/substeps.gif"
             category="org.eclipse.jdt.ui.java"
             fastViewWidthRatio="0.40"
-            class="com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPart"
+            class="com.technophobia.substeps.ui.SubstepsFeatureTestRunnerViewPart"
             id="com.technophobia.substeps.runner.SubstepsResultView">
       </view>
    </extension>

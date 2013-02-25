@@ -40,7 +40,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.packageadmin.PackageAdmin;
 
-import com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPart;
+import com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPartOld;
+import com.technophobia.substeps.model.LaunchManagerAwareSubstepsModel;
 import com.technophobia.substeps.model.SubstepsModel;
 import com.technophobia.substeps.model.SubstepsRunListener;
 
@@ -69,7 +70,7 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
         super();
         this.isStarted = false;
         FeatureRunnerPlugin.pluginInstance = this;
-        this.model = new SubstepsModel();
+        this.model = new LaunchManagerAwareSubstepsModel();
     }
 
 
@@ -148,7 +149,10 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
 
 
     public static void log(final int status, final String message) {
-        instance().log.log(new Status(status, PLUGIN_ID, message));
+        final FeatureRunnerPlugin instance = instance();
+        if (instance != null) {
+            instance.log.log(new Status(status, PLUGIN_ID, message));
+        }
     }
 
 
@@ -156,13 +160,15 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
         instance().log.log(new Status(IStatus.ERROR, PLUGIN_ID, IStatus.ERROR, "Error", ex));
     }
 
-	public static void error(final String msg){
-		instance().log.log(new Status(IStatus.ERROR, PLUGIN_ID, msg));
-	}
 
-	public static void error(final String msg, final Throwable t){
-		instance().log.log(new Status(IStatus.ERROR, PLUGIN_ID, msg, t));
-	}
+    public static void error(final String msg) {
+        instance().log.log(new Status(IStatus.ERROR, PLUGIN_ID, msg));
+    }
+
+
+    public static void error(final String msg, final Throwable t) {
+        instance().log.log(new Status(IStatus.ERROR, PLUGIN_ID, msg, t));
+    }
 
 
     public static FeatureRunnerPlugin instance() {
@@ -233,7 +239,7 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
     }
 
 
-    public SubstepsFeatureTestRunnerViewPart showTestRunnerViewPartInActivePage() {
+    public SubstepsFeatureTestRunnerViewPartOld showTestRunnerViewPartInActivePage() {
         try {
             // Have to force the creation of view part contents
             // otherwise the UI will not be updated
@@ -241,12 +247,12 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
             final IWorkbenchPage page = window != null ? window.getActivePage() : null;
             if (page == null)
                 return null;
-            final SubstepsFeatureTestRunnerViewPart view = (SubstepsFeatureTestRunnerViewPart) page
-                    .findView(SubstepsFeatureTestRunnerViewPart.NAME);
+            final SubstepsFeatureTestRunnerViewPartOld view = (SubstepsFeatureTestRunnerViewPartOld) page
+                    .findView(SubstepsFeatureTestRunnerViewPartOld.NAME);
             if (view == null) {
                 // create and show the result view if it isn't created yet.
-                return (SubstepsFeatureTestRunnerViewPart) page.showView(SubstepsFeatureTestRunnerViewPart.NAME, null,
-                        IWorkbenchPage.VIEW_VISIBLE);
+                return (SubstepsFeatureTestRunnerViewPartOld) page.showView(SubstepsFeatureTestRunnerViewPartOld.NAME,
+                        null, IWorkbenchPage.VIEW_VISIBLE);
             }
             return view;
         } catch (final PartInitException pie) {

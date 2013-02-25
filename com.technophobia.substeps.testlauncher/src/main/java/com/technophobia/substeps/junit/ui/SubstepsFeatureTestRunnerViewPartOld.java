@@ -125,10 +125,10 @@ import com.technophobia.substeps.model.structure.SubstepsTestLeafElement;
 import com.technophobia.substeps.preferences.PreferencesConstants;
 import com.technophobia.substeps.supplier.Supplier;
 
-public class SubstepsFeatureTestRunnerViewPart extends ViewPart implements UpdateJobManager, Notifier<Runnable>,
+public class SubstepsFeatureTestRunnerViewPartOld extends ViewPart implements UpdateJobManager, Notifier<Runnable>,
         Callback, IPropertyListener {
 
-    public static final String NAME = "com.technophobia.substeps.runner.SubstepsResultView";
+    public static final String NAME = "com.technophobia.substeps.runner.SubstepsResultViewOld";
 
     private static final IMarker FAMILY_SUBSTEPS_FEATURE_RUN = new IMarker() {
         // No-op
@@ -210,7 +210,7 @@ public class SubstepsFeatureTestRunnerViewPart extends ViewPart implements Updat
     private Image viewImage;
 
 
-    public SubstepsFeatureTestRunnerViewPart() {
+    public SubstepsFeatureTestRunnerViewPartOld() {
         this.disposedChecker = new Supplier<Boolean>() {
 
             @Override
@@ -1158,11 +1158,11 @@ public class SubstepsFeatureTestRunnerViewPart extends ViewPart implements Updat
         return new Supplier<SubstepsSessionListener>() {
             @Override
             public SubstepsSessionListener get() {
-                return new TestSessionListener(testViewer, SubstepsFeatureTestRunnerViewPart.this, infoMessageUpdater,
-                        uiUpdater, showOnErrorOnlyNotifier(), SubstepsFeatureTestRunnerViewPart.this, actionManager,
-                        sessionManager, testRunStatsSupplier, disposedChecker, autoScrollNotifier(),
-                        SubstepsFeatureTestRunnerViewPart.this, viewTitleUiUpdater, testResultsView, failureTrace,
-                        dirtyListener);
+                return new TestSessionListener(testViewer, SubstepsFeatureTestRunnerViewPartOld.this,
+                        infoMessageUpdater, uiUpdater, showOnErrorOnlyNotifier(),
+                        SubstepsFeatureTestRunnerViewPartOld.this, actionManager, sessionManager, testRunStatsSupplier,
+                        disposedChecker, autoScrollNotifier(), SubstepsFeatureTestRunnerViewPartOld.this,
+                        viewTitleUiUpdater, testResultsView, failureTrace, dirtyListener);
             }
         };
     }

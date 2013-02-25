@@ -23,7 +23,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 
 import com.technophobia.substeps.FeatureRunnerPlugin;
-import com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPart;
+import com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPartOld;
 
 public class JunitTestResultsView implements TestResultsView {
 
@@ -38,15 +38,15 @@ public class JunitTestResultsView implements TestResultsView {
     @Override
     public void showTestResultsView() {
         final IWorkbenchPage page = window.getActivePage();
-        SubstepsFeatureTestRunnerViewPart testRunner = null;
+        SubstepsFeatureTestRunnerViewPartOld testRunner = null;
 
         if (page != null) {
             try { // show the result view
-                testRunner = (SubstepsFeatureTestRunnerViewPart) page.findView(SubstepsFeatureTestRunnerViewPart.NAME);
+                testRunner = (SubstepsFeatureTestRunnerViewPartOld) page.findView(SubstepsFeatureTestRunnerViewPartOld.NAME);
                 if (testRunner == null) {
                     final IWorkbenchPart activePart = page.getActivePart();
-                    testRunner = (SubstepsFeatureTestRunnerViewPart) page.showView(
-                            SubstepsFeatureTestRunnerViewPart.NAME, null, IWorkbenchPage.VIEW_VISIBLE);
+                    testRunner = (SubstepsFeatureTestRunnerViewPartOld) page.showView(
+                            SubstepsFeatureTestRunnerViewPartOld.NAME, null, IWorkbenchPage.VIEW_VISIBLE);
                     // restore focus
                     page.activate(activePart);
                 } else {
