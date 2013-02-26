@@ -1,5 +1,9 @@
 package com.technophobia.substeps.ui.component;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.graphics.RGB;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -8,14 +12,18 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.substeps.supplier.Callback1;
+import com.technophobia.substeps.ui.model.DocumentHighlight;
+import com.technophobia.substeps.ui.model.StyledDocument;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
 
 @RunWith(JMock.class)
 public class SubstepsTextModelExecutionReporterTest {
 
+    private static final RGB GREY = new RGB(128, 128, 128);
+
     private Mockery context;
 
-    private Callback1<String> textModelAsStringCallback;
+    private Callback1<StyledDocument> textModelCallback;
 
     private SubstepsTestExecutionReporter executionReporter;
 
@@ -25,9 +33,9 @@ public class SubstepsTextModelExecutionReporterTest {
     public void initialise() {
         this.context = new Mockery();
 
-        this.textModelAsStringCallback = context.mock(Callback1.class);
+        this.textModelCallback = context.mock(Callback1.class);
 
-        this.executionReporter = new SubstepsTextModelExecutionReporter(textModelAsStringCallback);
+        this.executionReporter = new StyledDocumentSubstepsTextExecutionReporter(textModelCallback);
     }
 
 
@@ -36,7 +44,7 @@ public class SubstepsTextModelExecutionReporterTest {
 
         context.checking(new Expectations() {
             {
-                oneOf(textModelAsStringCallback).doCallback("");
+                oneOf(textModelCallback).doCallback(new StyledDocument("", new ArrayList<DocumentHighlight>()));
             }
         });
 
@@ -46,9 +54,13 @@ public class SubstepsTextModelExecutionReporterTest {
 
     @Test
     public void singleExecutionNodeProducesCorrectTextModelString() {
+
+        final List<DocumentHighlight> highlights = new ArrayList<DocumentHighlight>();
+        highlights.add(new DocumentHighlight(0, 26, GREY));
+
         context.checking(new Expectations() {
             {
-                oneOf(textModelAsStringCallback).doCallback("Feature: This is a feature");
+                oneOf(textModelCallback).doCallback(new StyledDocument("Feature: This is a feature", highlights));
             }
         });
 
@@ -59,11 +71,19 @@ public class SubstepsTextModelExecutionReporterTest {
 
     @Test
     public void multipleExecutionNodesProduceCorrectTextModelString() {
+        final List<DocumentHighlight> highlights = new ArrayList<DocumentHighlight>();
+        highlights.add(new DocumentHighlight(0, 26, GREY));
+        highlights.add(new DocumentHighlight(27, 21, GREY));
+        highlights.add(new DocumentHighlight(49, 17, GREY));
+        highlights.add(new DocumentHighlight(67, 21, GREY));
+
         context.checking(new Expectations() {
             {
-                oneOf(textModelAsStringCallback)
+                oneOf(textModelCallback)
                         .doCallback(
-                                "Feature: This is a feature\n\tScenario: A scenario\n\t\tGiven something\n\t\tThen something else");
+                                new StyledDocument(
+                                        "Feature: This is a feature\n\tScenario: A scenario\n\t\tGiven something\n\t\tThen something else",
+                                        highlights));
             }
         });
 
@@ -77,11 +97,21 @@ public class SubstepsTextModelExecutionReporterTest {
 
     @Test
     public void nestedExecutionNodesProduceCorrectTextModelString() {
+
+        final List<DocumentHighlight> highlights = new ArrayList<DocumentHighlight>();
+        highlights.add(new DocumentHighlight(0, 26, GREY));
+        highlights.add(new DocumentHighlight(27, 21, GREY));
+        highlights.add(new DocumentHighlight(49, 17, GREY));
+        highlights.add(new DocumentHighlight(67, 21, GREY));
+        highlights.add(new DocumentHighlight(89, 21, GREY));
+
         context.checking(new Expectations() {
             {
-                oneOf(textModelAsStringCallback)
+                oneOf(textModelCallback)
                         .doCallback(
-                                "Feature: This is a feature\n\tScenario: A scenario\n\t\tGiven something\n\t\t\tGiven some substep\n\t\tThen something else");
+                                new StyledDocument(
+                                        "Feature: This is a feature\n\tScenario: A scenario\n\t\tGiven something\n\t\t\tGiven some substep\n\t\tThen something else",
+                                        highlights));
             }
         });
 
@@ -99,7 +129,7 @@ public class SubstepsTextModelExecutionReporterTest {
 
         context.checking(new Expectations() {
             {
-                oneOf(textModelAsStringCallback).doCallback("");
+                oneOf(textModelCallback).doCallback(new StyledDocument("", new ArrayList<DocumentHighlight>()));
             }
         });
 

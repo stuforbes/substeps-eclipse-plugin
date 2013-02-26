@@ -25,6 +25,9 @@ public class SubstepsSessionListenerManagerTest {
     private Mockery context;
 
     private SubstepsSessionListener sessionListener;
+
+    private SubstepsSessionListenerManager sessionListenerManager;
+
     private FakeSubstepsModel substepsModel;
 
 
@@ -34,12 +37,15 @@ public class SubstepsSessionListenerManagerTest {
 
         this.sessionListener = context.mock(SubstepsSessionListener.class);
         this.substepsModel = new FakeSubstepsModel();
+
+        this.sessionListenerManager = new SubstepsSessionListenerManager(sessionListener);
     }
 
 
     @Test
     public void addsSessionListenerToNewlyCreatedSessions() {
-        new SubstepsSessionListenerManager(substepsModel, sessionListener);
+
+        sessionListenerManager.registerListenersOn(substepsModel);
 
         final SubstepsRunSession runSession = context.mock(SubstepsRunSession.class);
 
@@ -56,7 +62,8 @@ public class SubstepsSessionListenerManagerTest {
 
     @Test
     public void removesSessionListenerToRecentlyDeactivatedSessions() {
-        new SubstepsSessionListenerManager(substepsModel, sessionListener);
+
+        sessionListenerManager.registerListenersOn(substepsModel);
 
         final SubstepsRunSession runSession = context.mock(SubstepsRunSession.class);
 

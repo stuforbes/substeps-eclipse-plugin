@@ -18,9 +18,21 @@ import com.technophobia.substeps.model.SubstepsSessionListener;
  */
 public class SubstepsSessionListenerManager {
 
-    public SubstepsSessionListenerManager(final SubstepsModel substepsModel,
-            final SubstepsSessionListener sessionListener) {
-        substepsModel.addTestRunSessionListener(new SessionListenerProvidedRunSessionListener(sessionListener));
+    private final SubstepsRunSessionListener runSessionListener;
+
+
+    public SubstepsSessionListenerManager(final SubstepsSessionListener sessionListener) {
+        this.runSessionListener = new SessionListenerProvidedRunSessionListener(sessionListener);
+    }
+
+
+    public void registerListenersOn(final SubstepsModel substepsModel) {
+        substepsModel.addTestRunSessionListener(runSessionListener);
+    }
+
+
+    public void unRegisterListenersOn(final SubstepsModel substepsModel) {
+        substepsModel.removeTestRunSessionListener(runSessionListener);
     }
 
     private static final class SessionListenerProvidedRunSessionListener implements SubstepsRunSessionListener {
