@@ -218,7 +218,7 @@ public class SubstepsFeatureTestRunnerViewPartOld extends ViewPart implements Up
                 return Boolean.valueOf(isDisposed());
             }
         };
-        this.iconProvider = new SubstepsIconProvider(new ImageDescriptorImageLoader(), new ImageDescriptorLoader());
+        this.iconProvider = new SubstepsIconProvider(new JunitImageDescriptorLoader());
 
         this.infoMessageUpdater = new OneTimeRenderUpdater<String>(new Renderer<String>() {
             @Override
@@ -351,7 +351,7 @@ public class SubstepsFeatureTestRunnerViewPartOld extends ViewPart implements Up
         actionBars.setGlobalActionHandler(ActionFactory.PASTE.getId(), pasteAction);
 
         this.viewHistory = new RunnerViewHistory(sessionManager, parentComposite.getShell(), sessionManager,
-                new ImageDescriptorLoader(), iconProvider, pasteAction);
+                new JunitImageDescriptorLoader(), iconProvider, pasteAction);
         configureToolBar();
 
         initPageSwitcher();

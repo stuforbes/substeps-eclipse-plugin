@@ -70,23 +70,20 @@ public class UpdateViewWithSessionListener implements SubstepsSessionListener {
 
     @Override
     public void testStarted(final SubstepsTestLeafElement testCaseElement) {
-        // substepsFeatureTestRunnerViewPart.addListItem("Test started " +
-        // testCaseElement.getTestName());
+        executionReporter.executingNode(testCaseElement.getId());
     }
 
 
     @Override
     public void testEnded(final SubstepsTestLeafElement testCaseElement) {
-        // substepsFeatureTestRunnerViewPart.addListItem("Test ended " +
-        // testCaseElement.getTestName());
+        executionReporter.nodeCompleted(testCaseElement.getId());
     }
 
 
     @Override
     public void testFailed(final SubstepsTestElement testElement, final Status status, final String trace,
             final String expected, final String actual) {
-        // substepsFeatureTestRunnerViewPart.addListItem("Test failed " +
-        // testElement.getTestName());
+        executionReporter.nodeFailed(testElement.getId());
     }
 
 

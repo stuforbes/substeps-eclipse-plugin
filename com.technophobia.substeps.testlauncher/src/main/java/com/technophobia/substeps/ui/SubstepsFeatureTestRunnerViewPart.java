@@ -8,6 +8,7 @@ import org.eclipse.ui.part.ViewPart;
 
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
+import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.ui.run.SubstepsSessionListenerManager;
 import com.technophobia.substeps.ui.session.UpdateViewWithSessionListener;
 
@@ -19,13 +20,16 @@ public class SubstepsFeatureTestRunnerViewPart extends ViewPart {
 
     private ColourManager colourManager;
 
+    private SubstepsIconProvider iconProvider;
+
 
     @Override
     public void init(final IViewSite site, final IMemento memento) throws PartInitException {
         super.init(site, memento);
 
         this.colourManager = new ColourManager();
-        this.runnerView = new StyledTextRunnerView(colourManager);
+        this.iconProvider = new SubstepsIconProvider(new ImageDescriptorLoader());
+        this.runnerView = new StyledTextRunnerView(colourManager, iconProvider);
 
         this.substepsSessionManager = new SubstepsSessionListenerManager(new UpdateViewWithSessionListener(
                 runnerView.executionReporter()));
@@ -41,6 +45,9 @@ public class SubstepsFeatureTestRunnerViewPart extends ViewPart {
 
         substepsSessionManager.unRegisterListenersOn(FeatureRunnerPlugin.instance().getModel());
         substepsSessionManager = null;
+
+        iconProvider.dispose();
+        iconProvider = null;
 
         super.dispose();
     }

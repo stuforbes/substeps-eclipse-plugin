@@ -16,5 +16,14 @@ public interface SubstepsTestExecutionReporter {
     void allExecutionNodesAdded();
 
 
+    void executingNode(String id);
+
+
+    void nodeCompleted(String id);
+
+
+    void nodeFailed(String id);
+
+
     void resetExecutionState();
 }

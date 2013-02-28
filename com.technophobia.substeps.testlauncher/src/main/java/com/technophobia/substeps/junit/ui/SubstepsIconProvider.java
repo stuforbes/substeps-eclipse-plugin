@@ -28,13 +28,10 @@ import com.technophobia.substeps.supplier.Transformer;
 public class SubstepsIconProvider implements Disposable {
 
     private final Map<SubstepsIcon, Image> icons;
-    private final Transformer<SubstepsIcon, Image> imageLoader;
     private final Transformer<SubstepsIcon, ImageDescriptor> imageDescriptorLoader;
 
 
-    public SubstepsIconProvider(final Transformer<SubstepsIcon, Image> imageLoader,
-            final Transformer<SubstepsIcon, ImageDescriptor> imageDescriptorLoader) {
-        this.imageLoader = imageLoader;
+    public SubstepsIconProvider(final Transformer<SubstepsIcon, ImageDescriptor> imageDescriptorLoader) {
         this.imageDescriptorLoader = imageDescriptorLoader;
         this.icons = new HashMap<SubstepsIcon, Image>();
     }
@@ -62,6 +59,6 @@ public class SubstepsIconProvider implements Disposable {
 
 
     private Image createImageFor(final SubstepsIcon iconToLoad) {
-        return imageLoader.from(iconToLoad);
+        return imageDescriptorFor(iconToLoad).createImage();
     }
 }

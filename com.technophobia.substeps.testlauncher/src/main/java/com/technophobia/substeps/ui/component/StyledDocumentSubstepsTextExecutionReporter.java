@@ -3,11 +3,18 @@ package com.technophobia.substeps.ui.component;
 import static com.technophobia.substeps.util.LogicOperators.not;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.graphics.RGB;
 
-import com.technophobia.substeps.supplier.Callback1;
+import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.substeps.FeatureRunnerPlugin;
+import com.technophobia.substeps.supplier.Transformer;
+import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
+import com.technophobia.substeps.ui.component.TextModelFragment.TextState;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
@@ -16,17 +23,21 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
 
     private static final String NULL_PARENT_ID = "-1";
 
+    private static final Map<TextState, Transformer<TextModelFragment, DocumentHighlight>> textModelTypeToColourMap = initTextModelTypeToDocumentHighlightMap();
+
     private final List<TextModelFragment> textFragments;
 
     private int currentLength;
+    private int currentLine;
 
-    private final Callback1<StyledDocument> textModelCallback;
+    private final StyledDocumentUpdater documentUpdater;
 
 
-    public StyledDocumentSubstepsTextExecutionReporter(final Callback1<StyledDocument> textModelCallback) {
-        this.textModelCallback = textModelCallback;
+    public StyledDocumentSubstepsTextExecutionReporter(final StyledDocumentUpdater documentUpdater) {
+        this.documentUpdater = documentUpdater;
         this.textFragments = new ArrayList<TextModelFragment>();
         this.currentLength = 0;
+        this.currentLine = 0;
     }
 
 
@@ -34,11 +45,56 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
     public void addExecutionNode(final String id, final String parentNodeId, final String text) {
         // We don't add the root 'Features' node
         if (not(NULL_PARENT_ID.equals(parentNodeId))) {
-            final int depth = depthFor(id, parentNodeId);
-            final int textLength = text.length() + depth;
-            textFragments.add(new TextModelFragment(id, text, depth, currentLength, textLength));
+            final TextModelFragment parent = findNodeWithIdOrNull(parentNodeId);
 
-            currentLength += textLength + 1;
+            TextModelFragment fragment;
+            if (parent != null) {
+                fragment = parent.createChild(id, text, currentLength, currentLine);
+            } else {
+                fragment = TextModelFragment.createRootFragment(id, text, currentLength, currentLine,
+                        textFragmentStateChanged());
+            }
+            textFragments.add(fragment);
+            currentLength += fragment.length() + 1;
+            currentLine++;
+        }
+    }
+
+
+    @Override
+    public void executingNode(final String id) {
+        final TextModelFragment textFragment = findNodeWithIdOrNull(id);
+        if (textFragment != null) {
+            textFragment.markInProgress();
+        } else {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not mark node with id " + id
+                    + " as in progress, as it could not be located");
+        }
+    }
+
+
+    @Override
+    public void nodeCompleted(final String id) {
+        final TextModelFragment textFragment = findNodeWithIdOrNull(id);
+        if (textFragment != null) {
+            textFragment.markComplete();
+
+            documentUpdater.highlightChanged(HighlightEvent.TestPassed, toHighlight(textFragment));
+        } else {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not mark node with id " + id
+                    + " as complete, as it could not be located");
+        }
+    }
+
+
+    @Override
+    public void nodeFailed(final String id) {
+        final TextModelFragment textFragment = findNodeWithIdOrNull(id);
+        if (textFragment != null) {
+            textFragment.markFailed();
+        } else {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not mark node with id " + id
+                    + " as complete, as it could not be located");
         }
     }
 
@@ -47,12 +103,13 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
     public void resetExecutionState() {
         this.textFragments.clear();
         this.currentLength = 0;
+        this.currentLine = 0;
     }
 
 
     @Override
     public void allExecutionNodesAdded() {
-        textModelCallback.doCallback(textFragmentsAsStyledDocument());
+        documentUpdater.documentChanged(textFragmentsAsStyledDocument());
     }
 
 
@@ -64,61 +121,84 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
                 sb.append("\n");
             }
             sb.append(textFragment.indentedText());
-            highlights.add(new DocumentHighlight(textFragment.startPosition(), textFragment.length(), new RGB(128, 128,
-                    128)));
+            highlights.add(toHighlight(textFragment));
         }
         return new StyledDocument(sb.toString(), highlights);
     }
 
 
-    private int depthFor(final String id, final String parentNodeId) {
-        if (parentNodeId == null) {
-            return 0;
-        } else if (isChildOfLast(parentNodeId)) {
-            return currentDepth() + 1;
-        } else {
-            final TextModelFragment fragment = findNodeWithIdOrNull(parentNodeId);
-            if (fragment != null) {
-                return fragment.depth() + 1;
+    private Callback1<TextModelFragment> textFragmentStateChanged() {
+        return new Callback1<TextModelFragment>() {
+
+            @Override
+            public void callback(final TextModelFragment textFragment) {
+                documentUpdater
+                        .highlightChanged(highlightEventFor(textFragment.textState()), toHighlight(textFragment));
             }
-
-            // couldn't find fragment (should never happen)
-            return 0;
-        }
+        };
     }
 
 
-    private boolean isChildOfLast(final String parentNodeId) {
-        if (not(textFragments.isEmpty())) {
-            final TextModelFragment lastElement = textFragments.get(textFragments.size() - 1);
-            return parentNodeId != null && parentNodeId.equals(lastElement.id());
+    protected HighlightEvent highlightEventFor(final TextState textState) {
+        if (TextState.InProgress.equals(textState)) {
+            return HighlightEvent.NoChange;
+        } else if (TextState.Passed.equals(textState)) {
+            return HighlightEvent.TestPassed;
+        } else if (TextState.Failed.equals(textState) || TextState.SubNodeFailed.equals(textState)) {
+            return HighlightEvent.TestFailed;
         }
-
-        // no text fragments, therefore this item isn't a child
-        return false;
+        FeatureRunnerPlugin.log(IStatus.WARNING, "Unsure of highlight event for text state " + textState);
+        return null;
     }
 
 
-    private int currentDepth() {
-        if (not(textFragments.isEmpty())) {
-            final TextModelFragment lastElement = textFragments.get(textFragments.size() - 1);
-            return lastElement.depth();
-        }
-
-        // no items, so current depth must be 0
-        return 0;
+    private DocumentHighlight toHighlight(final TextModelFragment textFragment) {
+        return textModelTypeToColourMap.get(textFragment.textState()).from(textFragment);
     }
 
 
-    private TextModelFragment findNodeWithIdOrNull(final String parentNodeId) {
+    private TextModelFragment findNodeWithIdOrNull(final String id) {
         // optimisation - the parent of this node is more likely to be nearby to
         // the current node, not the start of the document.
         // Therefore, start at the end and work backwards
         for (int i = textFragments.size() - 1; i >= 0; i--) {
-            if (parentNodeId.equals(textFragments.get(i).id())) {
+            if (id.equals(textFragments.get(i).id())) {
                 return textFragments.get(i);
             }
         }
         return null;
+    }
+
+
+    private static Map<TextState, Transformer<TextModelFragment, DocumentHighlight>> initTextModelTypeToDocumentHighlightMap() {
+        final Map<TextState, Transformer<TextModelFragment, DocumentHighlight>> results = new HashMap<TextState, Transformer<TextModelFragment, DocumentHighlight>>();
+
+        results.put(TextState.Unprocessed, withColour(128, 128, 128));
+        results.put(TextState.InProgress, boldWithColour(0, 0, 0));
+        results.put(TextState.Passed, withColour(24, 171, 57));
+        results.put(TextState.Failed, withColour(255, 54, 32));
+        results.put(TextState.SubNodeFailed, withColour(0, 0, 0));
+        return results;
+    }
+
+
+    private static Transformer<TextModelFragment, DocumentHighlight> withColour(final int r, final int g, final int b) {
+        return new Transformer<TextModelFragment, DocumentHighlight>() {
+            @Override
+            public DocumentHighlight from(final TextModelFragment textFragment) {
+                return new DocumentHighlight(textFragment.lineNumber(), textFragment.length(), new RGB(r, g, b));
+            }
+        };
+    }
+
+
+    private static Transformer<TextModelFragment, DocumentHighlight> boldWithColour(final int r, final int g,
+            final int b) {
+        return new Transformer<TextModelFragment, DocumentHighlight>() {
+            @Override
+            public DocumentHighlight from(final TextModelFragment textFragment) {
+                return new DocumentHighlight(textFragment.lineNumber(), textFragment.length(), true, new RGB(r, g, b));
+            }
+        };
     }
 }
