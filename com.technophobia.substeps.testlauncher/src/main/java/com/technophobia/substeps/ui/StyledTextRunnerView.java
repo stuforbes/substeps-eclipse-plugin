@@ -1,9 +1,28 @@
 package com.technophobia.substeps.ui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.DocumentEvent;
+import org.eclipse.jface.text.IDocumentListener;
+import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.AnnotationModel;
+import org.eclipse.jface.text.source.CompositeRuler;
+import org.eclipse.jface.text.source.IAnnotationAccess;
+import org.eclipse.jface.text.source.IOverviewRuler;
+import org.eclipse.jface.text.source.ISharedTextColors;
+import org.eclipse.jface.text.source.IVerticalRuler;
+import org.eclipse.jface.text.source.OverviewRuler;
+import org.eclipse.jface.text.source.projection.ProjectionAnnotation;
+import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel;
+import org.eclipse.jface.text.source.projection.ProjectionSupport;
+import org.eclipse.jface.text.source.projection.ProjectionViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.PaintObjectEvent;
 import org.eclipse.swt.custom.PaintObjectListener;
@@ -15,6 +34,8 @@ import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.editors.text.EditorsUI;
+import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
@@ -38,9 +59,13 @@ public class StyledTextRunnerView implements RunnerView {
     private final ColourManager colourManager;
 
     private final SubstepsIconProvider iconProvider;
+    private ProjectionViewer viewer;
 
     private List<Integer> offsets;
     private List<SubstepsIcon> images;
+
+    private Annotation[] oldAnnotations;
+    private ProjectionAnnotationModel annotationModel;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
@@ -54,7 +79,39 @@ public class StyledTextRunnerView implements RunnerView {
 
     @Override
     public void createPartControl(final Composite parent) {
-        textComponent = new StyledText(parent, SWT.BORDER | SWT.V_SCROLL);
+        final IVerticalRuler ruler = new CompositeRuler();
+        final IAnnotationAccess annotationAccess = new DefaultMarkerAnnotationAccess();
+        final ISharedTextColors textColours = EditorsUI.getSharedTextColors();
+        final IOverviewRuler overviewRuler = new OverviewRuler(annotationAccess, 10, textColours);
+        viewer = new ProjectionViewer(parent, ruler, overviewRuler, true, SWT.NONE);
+        final Document document = new Document();
+        viewer.setDocument(document, new AnnotationModel());
+
+        document.addDocumentListener(new IDocumentListener() {
+
+            @Override
+            public void documentChanged(final DocumentEvent event) {
+                FeatureRunnerPlugin.log(IStatus.INFO, "Document changed to " + event.getText());
+            }
+
+
+            @Override
+            public void documentAboutToBeChanged(final DocumentEvent event) {
+                // TODO Auto-generated method stub
+
+            }
+        });
+
+        final ProjectionSupport projectionSupport = new ProjectionSupport(viewer, annotationAccess, textColours);
+        projectionSupport.install();
+
+        // turn projection mode on
+        viewer.doOperation(ProjectionViewer.TOGGLE);
+
+        annotationModel = viewer.getProjectionAnnotationModel();
+
+        textComponent = viewer.getTextWidget();
+
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
         textComponent.setFont(font);
@@ -82,6 +139,27 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
+    public void updateFoldingStructure(final List<Position> positions) {
+        final Annotation[] annotations = new Annotation[positions.size()];
+
+        // this will hold the new annotations along // with their corresponding
+        // position
+        final Map<Annotation, Position> newAnnotations = new HashMap<Annotation, Position>();
+
+        for (int i = 0; i < positions.size(); i++) {
+            final Annotation annotation = new ProjectionAnnotation();
+
+            newAnnotations.put(annotation, positions.get(i));
+
+            annotations[i] = annotation;
+        }
+
+        annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null);
+
+        oldAnnotations = annotations;
+    }
+
+
     @Override
     public void dispose() {
         textComponent.dispose();
@@ -98,9 +176,9 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
-    protected void resetTextTo(final StyledDocument document) {
+    protected void resetTextTo(final StyledDocument styledDocument) {
         textComponent.setStyleRange(null);
-        textComponent.setText(document.getText());
+        viewer.getDocument().set(styledDocument.getText());
 
         final int lineCount = textComponent.getLineCount();
         images = new ArrayList<SubstepsIcon>(lineCount);
@@ -144,6 +222,12 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.setStyleRange(new StyleRange(textComponent.getOffsetAtLine(highlight.getLine()) + 1, highlight
                 .getLength(), colourManager.getColor(highlight.getColour()), colourManager.getColor(WHITE), highlight
                 .isBold() ? SWT.BOLD : SWT.NONE));
+
+        if (highlight.getLine() == 3) {
+            final int startOffset = textComponent.getOffsetAtLine(2);
+            final int endOffset = textComponent.getOffsetAtLine(4);
+            updateFoldingStructure(Arrays.asList(new Position(startOffset, endOffset - startOffset)));
+        }
     }
 
 
