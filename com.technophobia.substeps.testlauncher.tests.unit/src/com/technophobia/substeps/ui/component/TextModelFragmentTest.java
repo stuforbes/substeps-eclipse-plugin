@@ -12,6 +12,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.substeps.ui.TextHighlighter;
 import com.technophobia.substeps.ui.component.TextModelFragment.TextState;
 
 @RunWith(JMock.class)
@@ -19,21 +20,20 @@ public class TextModelFragmentTest {
 
     private Mockery context;
 
-    private Callback1<TextModelFragment> stateChangedCallback;
+    private TextHighlighter textHighlighter;
 
 
-    @SuppressWarnings("unchecked")
     @Before
     public void initialise() {
         this.context = new Mockery();
 
-        this.stateChangedCallback = context.mock(Callback1.class, "StateChangedCallback");
+        this.textHighlighter = context.mock(TextHighlighter.class);
     }
 
 
     @Test
     public void createChildIncrementsDepth() {
-        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, stateChangedCallback);
+        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, textHighlighter);
         final TextModelFragment child = root.createChild("2", "child", 5, 1);
         final TextModelFragment grandchild = child.createChild("3", "grandchild", 11, 2);
 
@@ -45,12 +45,11 @@ public class TextModelFragmentTest {
 
     @Test
     public void markInProgressUpdatesTextStateAccordingly() {
-        final TextModelFragment fragment = TextModelFragment
-                .createRootFragment("1", "text", 0, 0, stateChangedCallback);
+        final TextModelFragment fragment = TextModelFragment.createRootFragment("1", "text", 0, 0, textHighlighter);
 
         context.checking(new Expectations() {
             {
-                oneOf(stateChangedCallback).callback(fragment);
+                oneOf(textHighlighter).highlight(fragment);
             }
         });
 
@@ -62,12 +61,11 @@ public class TextModelFragmentTest {
 
     @Test
     public void markAsCompleteUpdatesTextStateAccordingly() {
-        final TextModelFragment fragment = TextModelFragment
-                .createRootFragment("1", "text", 0, 0, stateChangedCallback);
+        final TextModelFragment fragment = TextModelFragment.createRootFragment("1", "text", 0, 0, textHighlighter);
 
         context.checking(new Expectations() {
             {
-                oneOf(stateChangedCallback).callback(fragment);
+                oneOf(textHighlighter).highlight(fragment);
             }
         });
 
@@ -79,7 +77,7 @@ public class TextModelFragmentTest {
 
     @Test
     public void markAsCompleteUpdatesParentsStateCorrectly() {
-        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, stateChangedCallback);
+        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, textHighlighter);
         final TextModelFragment child1 = root.createChild("2", "child1", 5, 1);
         final TextModelFragment child2 = root.createChild("3", "child2", 12, 2);
         final TextModelFragment grandchild1 = child2.createChild("4", "grandchild1", 19, 3);
@@ -87,11 +85,11 @@ public class TextModelFragmentTest {
 
         context.checking(new Expectations() {
             {
-                oneOf(stateChangedCallback).callback(grandchild1);
-                oneOf(stateChangedCallback).callback(grandchild2);
-                oneOf(stateChangedCallback).callback(child2);
-                oneOf(stateChangedCallback).callback(child1);
-                oneOf(stateChangedCallback).callback(root);
+                oneOf(textHighlighter).highlight(grandchild1);
+                oneOf(textHighlighter).highlight(grandchild2);
+                oneOf(textHighlighter).highlight(child2);
+                oneOf(textHighlighter).highlight(child1);
+                oneOf(textHighlighter).highlight(root);
             }
         });
 
@@ -111,12 +109,11 @@ public class TextModelFragmentTest {
 
     @Test
     public void markAsFailedUpdatesTextStateAccordingly() {
-        final TextModelFragment fragment = TextModelFragment
-                .createRootFragment("1", "text", 0, 0, stateChangedCallback);
+        final TextModelFragment fragment = TextModelFragment.createRootFragment("1", "text", 0, 0, textHighlighter);
 
         context.checking(new Expectations() {
             {
-                oneOf(stateChangedCallback).callback(fragment);
+                oneOf(textHighlighter).highlight(fragment);
             }
         });
 
@@ -128,7 +125,7 @@ public class TextModelFragmentTest {
 
     @Test
     public void markAsFailedUpdatesHierarchyAccordingly() {
-        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, stateChangedCallback);
+        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, textHighlighter);
         final TextModelFragment child1 = root.createChild("2", "child1", 5, 1);
         final TextModelFragment child2 = root.createChild("3", "child2", 12, 2);
         final TextModelFragment grandchild1 = child2.createChild("4", "grandchild1", 19, 3);
@@ -136,9 +133,9 @@ public class TextModelFragmentTest {
 
         context.checking(new Expectations() {
             {
-                oneOf(stateChangedCallback).callback(grandchild1);
-                oneOf(stateChangedCallback).callback(child2);
-                oneOf(stateChangedCallback).callback(root);
+                oneOf(textHighlighter).highlight(grandchild1);
+                oneOf(textHighlighter).highlight(child2);
+                oneOf(textHighlighter).highlight(root);
             }
         });
 
@@ -161,7 +158,7 @@ public class TextModelFragmentTest {
     @SuppressWarnings({ "unchecked", "unused" })
     @Test
     public void doToAncestorsUpdatesCurrentNodeAndAllParents() {
-        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, stateChangedCallback);
+        final TextModelFragment root = TextModelFragment.createRootFragment("1", "root", 0, 0, textHighlighter);
         final TextModelFragment child1 = root.createChild("2", "child1", 5, 1);
         final TextModelFragment child2 = root.createChild("3", "child2", 12, 2);
         final TextModelFragment grandchild1 = child2.createChild("4", "grandchild1", 19, 3);

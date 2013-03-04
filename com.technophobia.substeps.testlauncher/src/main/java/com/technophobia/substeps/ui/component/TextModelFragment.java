@@ -1,8 +1,9 @@
 package com.technophobia.substeps.ui.component;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.substeps.ui.TextHighlighter;
 
-public class TextModelFragment {
+public class TextModelFragment implements HierarchicalTextStructure {
 
     public enum TextState {
         Unprocessed, //
@@ -25,25 +26,25 @@ public class TextModelFragment {
 
     private int numChildren;
     private int numChildrenPassed;
-    private final Callback1<TextModelFragment> stateChangedCallback;
+    private final TextHighlighter stateChangedHighlighter;
 
 
     public static TextModelFragment createRootFragment(final String id, final String text, final int startPos,
-            final int lineNumber, final Callback1<TextModelFragment> stateChangedCallback) {
-        return new TextModelFragment(id, text, 0, startPos, lineNumber, null, stateChangedCallback);
+            final int lineNumber, final TextHighlighter stateChangeHighlighter) {
+        return new TextModelFragment(id, text, 0, startPos, lineNumber, null, stateChangeHighlighter);
     }
 
 
     private TextModelFragment(final String id, final String text, final int depth, final int startPos,
             final int lineNumber, final TextModelFragment parentTextFragment,
-            final Callback1<TextModelFragment> stateChangedCallback) {
+            final TextHighlighter stateChangeHighlighter) {
         this.id = id;
         this.text = text;
         this.depth = depth;
         this.startPos = startPos;
         this.lineNumber = lineNumber;
         this.parentTextFragment = parentTextFragment;
-        this.stateChangedCallback = stateChangedCallback;
+        this.stateChangedHighlighter = stateChangeHighlighter;
         this.textState = TextState.Unprocessed;
         this.numChildren = 0;
         this.numChildrenPassed = 0;
@@ -53,7 +54,7 @@ public class TextModelFragment {
     // is start pos really needed? or length for that matter
     public TextModelFragment createChild(final String id, final String text, final int startPos, final int lineNumber) {
         numChildren++;
-        return new TextModelFragment(id, text, depth + 1, startPos, lineNumber, this, stateChangedCallback);
+        return new TextModelFragment(id, text, depth + 1, startPos, lineNumber, this, stateChangedHighlighter);
     }
 
 
@@ -69,6 +70,12 @@ public class TextModelFragment {
 
     public String indentedText() {
         final StringBuilder sb = new StringBuilder();
+
+        // initial space, this gets replaced by a tick/cross in the view
+        if (depth > 0) {
+            sb.append(" ");
+        }
+
         for (int i = 0; i < depth; i++) {
             sb.append("\t");
         }
@@ -77,18 +84,21 @@ public class TextModelFragment {
     }
 
 
+    @Override
     public int depth() {
         return depth;
     }
 
 
+    @Override
     public int length() {
         // for each level of depth, there's one extra char (\t)
-        return text.length() + depth;
+        return text.length() + depth + (depth > 0 ? 1 : 0);
     }
 
 
-    public int startPosition() {
+    @Override
+    public int offset() {
         return startPos;
     }
 
@@ -103,11 +113,16 @@ public class TextModelFragment {
     }
 
 
+    public boolean hasChildren() {
+        return numChildren > 0;
+    }
+
+
     public void markInProgress() {
         doToHierarchy(new Callback1<TextModelFragment>() {
             @Override
             public void callback(final TextModelFragment t) {
-                updateStateTo(TextState.InProgress);
+                t.updateStateTo(TextState.InProgress);
             }
         });
     }
@@ -153,7 +168,7 @@ public class TextModelFragment {
 
     private void updateStateTo(final TextState newState) {
         this.textState = newState;
-        stateChangedCallback.callback(this);
+        stateChangedHighlighter.highlight(this);
     }
 
 

@@ -1,15 +1,12 @@
 package com.technophobia.substeps.ui;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.text.Document;
-import org.eclipse.jface.text.DocumentEvent;
-import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
@@ -40,10 +37,12 @@ import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
+import com.technophobia.substeps.ui.component.ListDelegateHierarchicalTextCollection;
 import com.technophobia.substeps.ui.component.StyledDocumentSubstepsTextExecutionReporter;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
 import com.technophobia.substeps.ui.component.SubstepsIcon;
+import com.technophobia.substeps.ui.component.TextModelFragmentFactory;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
@@ -67,6 +66,8 @@ public class StyledTextRunnerView implements RunnerView {
     private Annotation[] oldAnnotations;
     private ProjectionAnnotationModel annotationModel;
 
+    private final StyledDocumentUpdater styledDocumentUpdater;
+
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
         this.colourManager = colourManager;
@@ -74,6 +75,8 @@ public class StyledTextRunnerView implements RunnerView {
 
         this.offsets = new ArrayList<Integer>();
         this.images = new ArrayList<SubstepsIcon>();
+
+        this.styledDocumentUpdater = updateTextComponentCallback();
     }
 
 
@@ -86,22 +89,6 @@ public class StyledTextRunnerView implements RunnerView {
         viewer = new ProjectionViewer(parent, ruler, overviewRuler, true, SWT.NONE);
         final Document document = new Document();
         viewer.setDocument(document, new AnnotationModel());
-
-        document.addDocumentListener(new IDocumentListener() {
-
-            @Override
-            public void documentChanged(final DocumentEvent event) {
-                FeatureRunnerPlugin.log(IStatus.INFO, "Document changed to " + event.getText());
-            }
-
-
-            @Override
-            public void documentAboutToBeChanged(final DocumentEvent event) {
-                // TODO Auto-generated method stub
-
-            }
-        });
-
         final ProjectionSupport projectionSupport = new ProjectionSupport(viewer, annotationAccess, textColours);
         projectionSupport.install();
 
@@ -172,7 +159,13 @@ public class StyledTextRunnerView implements RunnerView {
 
     @Override
     public SubstepsTestExecutionReporter executionReporter() {
-        return new StyledDocumentSubstepsTextExecutionReporter(updateTextComponentCallback());
+        final ListDelegateHierarchicalTextCollection textCollection = new ListDelegateHierarchicalTextCollection();
+        final TextChangedToDocumentUpdater stateChangeHighlighter = new TextChangedToDocumentUpdater(
+                styledDocumentUpdater);
+        final TextModelFragmentFactory textModelFragmentFactory = new TextModelFragmentFactory(textCollection,
+                stateChangeHighlighter);
+        return new StyledDocumentSubstepsTextExecutionReporter(textCollection, textModelFragmentFactory,
+                stateChangeHighlighter);
     }
 
 
@@ -185,6 +178,7 @@ public class StyledTextRunnerView implements RunnerView {
         offsets = new ArrayList<Integer>(lineCount);
 
         prepareTextStyleRanges(lineCount);
+        updateFoldingStructure(styledDocument.getPositions());
     }
 
 
@@ -206,7 +200,7 @@ public class StyledTextRunnerView implements RunnerView {
 
     private void createIconStyleRange(final int offset) {
         final StyleRange style = new StyleRange();
-        textComponent.replaceTextRange(offset, 0, "\uFFFC");
+        textComponent.replaceTextRange(offset, 1, "\uFFFC");
         style.start = offset;
         style.length = 1;
         style.metrics = new GlyphMetrics(IMAGE_HEIGHT, 0, IMAGE_WIDTH);
@@ -222,12 +216,6 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.setStyleRange(new StyleRange(textComponent.getOffsetAtLine(highlight.getLine()) + 1, highlight
                 .getLength(), colourManager.getColor(highlight.getColour()), colourManager.getColor(WHITE), highlight
                 .isBold() ? SWT.BOLD : SWT.NONE));
-
-        if (highlight.getLine() == 3) {
-            final int startOffset = textComponent.getOffsetAtLine(2);
-            final int endOffset = textComponent.getOffsetAtLine(4);
-            updateFoldingStructure(Arrays.asList(new Position(startOffset, endOffset - startOffset)));
-        }
     }
 
 
