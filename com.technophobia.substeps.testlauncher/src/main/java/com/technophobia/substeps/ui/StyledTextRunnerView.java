@@ -1,38 +1,23 @@
 package com.technophobia.substeps.ui;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.jface.text.Document;
-import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.source.Annotation;
-import org.eclipse.jface.text.source.AnnotationModel;
-import org.eclipse.jface.text.source.CompositeRuler;
-import org.eclipse.jface.text.source.IAnnotationAccess;
-import org.eclipse.jface.text.source.IOverviewRuler;
-import org.eclipse.jface.text.source.ISharedTextColors;
-import org.eclipse.jface.text.source.IVerticalRuler;
-import org.eclipse.jface.text.source.OverviewRuler;
-import org.eclipse.jface.text.source.projection.ProjectionAnnotation;
-import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel;
-import org.eclipse.jface.text.source.projection.ProjectionSupport;
-import org.eclipse.jface.text.source.projection.ProjectionViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.PaintObjectEvent;
 import org.eclipse.swt.custom.PaintObjectListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.editors.text.EditorsUI;
-import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
@@ -58,13 +43,9 @@ public class StyledTextRunnerView implements RunnerView {
     private final ColourManager colourManager;
 
     private final SubstepsIconProvider iconProvider;
-    private ProjectionViewer viewer;
 
     private List<Integer> offsets;
     private List<SubstepsIcon> images;
-
-    private Annotation[] oldAnnotations;
-    private ProjectionAnnotationModel annotationModel;
 
     private final StyledDocumentUpdater styledDocumentUpdater;
 
@@ -82,22 +63,8 @@ public class StyledTextRunnerView implements RunnerView {
 
     @Override
     public void createPartControl(final Composite parent) {
-        final IVerticalRuler ruler = new CompositeRuler();
-        final IAnnotationAccess annotationAccess = new DefaultMarkerAnnotationAccess();
-        final ISharedTextColors textColours = EditorsUI.getSharedTextColors();
-        final IOverviewRuler overviewRuler = new OverviewRuler(annotationAccess, 10, textColours);
-        viewer = new ProjectionViewer(parent, ruler, overviewRuler, true, SWT.NONE);
-        final Document document = new Document();
-        viewer.setDocument(document, new AnnotationModel());
-        final ProjectionSupport projectionSupport = new ProjectionSupport(viewer, annotationAccess, textColours);
-        projectionSupport.install();
 
-        // turn projection mode on
-        viewer.doOperation(ProjectionViewer.TOGGLE);
-
-        annotationModel = viewer.getProjectionAnnotationModel();
-
-        textComponent = viewer.getTextWidget();
+        textComponent = createTextComponent(parent);
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -105,45 +72,31 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.setLineSpacing(5);
         textComponent.setEditable(false);
 
+        textComponent.addPaintListener(new PaintListener() {
+
+            @Override
+            public void paintControl(final PaintEvent event) {
+                final GC gc = event.gc;
+                // final StyleRange style = event.style;
+                // final int start = style.start;
+                for (int i = 0; i < offsets.size(); i++) {
+                    final int offset = offsets.get(i);
+                    final Image image = iconProvider.imageFor(images.get(i));
+
+                    final Point locationAtOffset = textComponent.getLocationAtOffset(offset);
+                    gc.drawImage(image, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, locationAtOffset.x, locationAtOffset.y + 2,
+                            IMAGE_WIDTH, IMAGE_HEIGHT);
+                }
+            }
+        });
+
         textComponent.addPaintObjectListener(new PaintObjectListener() {
 
             @Override
             public void paintObject(final PaintObjectEvent event) {
-                final GC gc = event.gc;
-                final StyleRange style = event.style;
-                final int start = style.start;
-                for (int i = 0; i < offsets.size(); i++) {
-                    final int offset = offsets.get(i);
-                    if (start == offset) {
-                        final Image image = iconProvider.imageFor(images.get(i));
-                        final int x = event.x;
-                        final int y = event.y + event.ascent - style.metrics.ascent;
-                        gc.drawImage(image, x, y);
-                    }
-                }
+
             }
         });
-    }
-
-
-    public void updateFoldingStructure(final List<Position> positions) {
-        final Annotation[] annotations = new Annotation[positions.size()];
-
-        // this will hold the new annotations along // with their corresponding
-        // position
-        final Map<Annotation, Position> newAnnotations = new HashMap<Annotation, Position>();
-
-        for (int i = 0; i < positions.size(); i++) {
-            final Annotation annotation = new ProjectionAnnotation();
-
-            newAnnotations.put(annotation, positions.get(i));
-
-            annotations[i] = annotation;
-        }
-
-        annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null);
-
-        oldAnnotations = annotations;
     }
 
 
@@ -169,24 +122,34 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
+    protected StyledText createTextComponent(final Composite parent) {
+        return new StyledText(parent, SWT.BORDER);
+    }
+
+
     protected void resetTextTo(final StyledDocument styledDocument) {
         textComponent.setStyleRange(null);
-        viewer.getDocument().set(styledDocument.getText());
+        setTextTo(styledDocument.getText());
 
         final int lineCount = textComponent.getLineCount();
         images = new ArrayList<SubstepsIcon>(lineCount);
         offsets = new ArrayList<Integer>(lineCount);
+        prepareTextStyleRanges(textComponent.getLineCount());
 
-        prepareTextStyleRanges(lineCount);
-        updateFoldingStructure(styledDocument.getPositions());
+        textComponent.redraw();
+    }
+
+
+    protected void setTextTo(final String text) {
+        textComponent.setText(text);
     }
 
 
     private void prepareTextStyleRanges(final int lineCount) {
         for (int i = 1; i < lineCount; i++) {
             final int offset = textComponent.getOffsetAtLine(i);
-            createUnprocessedTextStyleRange(i, offset);
             createIconStyleRange(offset);
+            createUnprocessedTextStyleRange(i, offset);
         }
     }
 
@@ -198,9 +161,9 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
-    private void createIconStyleRange(final int offset) {
+    protected void createIconStyleRange(final int offset) {
         final StyleRange style = new StyleRange();
-        textComponent.replaceTextRange(offset, 1, "\uFFFC");
+        // textComponent.replaceTextRange(offset, 1, "\uFFFC");
         style.start = offset;
         style.length = 1;
         style.metrics = new GlyphMetrics(IMAGE_HEIGHT, 0, IMAGE_WIDTH);
@@ -233,7 +196,8 @@ public class StyledTextRunnerView implements RunnerView {
                 images.remove(normalizedLine);
                 images.add(normalizedLine, SubstepsIcon.SubstepFailed);
             } else if (HighlightEvent.NoChange.equals(highlightEvent)) {
-                // No change
+                images.remove(normalizedLine);
+                images.add(normalizedLine, SubstepsIcon.SubstepNoResult);
             } else {
                 FeatureRunnerPlugin.log(IStatus.WARNING, "Unexpected highlight event type");
             }
