@@ -43,10 +43,16 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
             final List<Position> positions) {
 
         final List<DocumentHighlight> highlights = new ArrayList<DocumentHighlight>();
+        final Map<Integer, Integer> offsetToParentOffsetMapping = new HashMap<Integer, Integer>();
         for (final HierarchicalTextStructure textStructure : textStructures) {
-            highlights.add(toHighlight((TextModelFragment) textStructure));
+            final TextModelFragment textFragment = (TextModelFragment) textStructure;
+            highlights.add(toHighlight(textFragment));
+            final TextModelFragment parent = textFragment.parentOrNull();
+            if (parent != null) {
+                offsetToParentOffsetMapping.put(textStructure.offset(), parent.offset());
+            }
         }
-        updater.documentChanged(new StyledDocument(document, highlights, positions));
+        updater.documentChanged(new StyledDocument(document, highlights, positions, offsetToParentOffsetMapping));
     }
 
 

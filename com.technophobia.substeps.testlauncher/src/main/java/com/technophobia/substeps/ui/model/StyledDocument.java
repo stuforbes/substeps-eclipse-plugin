@@ -1,6 +1,7 @@
 package com.technophobia.substeps.ui.model;
 
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.jface.text.Position;
 
@@ -9,12 +10,15 @@ public class StyledDocument {
     private final String text;
     private final List<DocumentHighlight> highlights;
     private final List<Position> positions;
+    private final Map<Integer, Integer> offsetToParentOffsetMapping;
 
 
-    public StyledDocument(final String text, final List<DocumentHighlight> highlights, final List<Position> positions) {
+    public StyledDocument(final String text, final List<DocumentHighlight> highlights, final List<Position> positions,
+            final Map<Integer, Integer> offsetToParentOffsetMapping) {
         this.text = text;
         this.highlights = highlights;
         this.positions = positions;
+        this.offsetToParentOffsetMapping = offsetToParentOffsetMapping;
     }
 
 
@@ -30,6 +34,11 @@ public class StyledDocument {
 
     public List<Position> getPositions() {
         return positions;
+    }
+
+
+    public Map<Integer, Integer> getOffsetToParentOffsetMapping() {
+        return offsetToParentOffsetMapping;
     }
 
 
@@ -76,4 +85,5 @@ public class StyledDocument {
     public String toString() {
         return text + " with highlights " + highlights + "; and positions " + positions;
     }
+
 }
