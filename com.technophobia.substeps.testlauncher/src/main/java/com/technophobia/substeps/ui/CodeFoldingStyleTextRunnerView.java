@@ -21,6 +21,7 @@ import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel;
 import org.eclipse.jface.text.source.projection.ProjectionSupport;
 import org.eclipse.jface.text.source.projection.ProjectionViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.editors.text.EditorsUI;
@@ -46,10 +47,14 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     // replace a now processing highlight
     private final Map<Integer, DocumentHighlight> highlights;
 
+    // Map of all icon style ranges, keyed on offset.
+    private final Map<Integer, StyleRange> iconStyleRanges;
+
 
     public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
         super(colourManager, iconProvider);
         this.highlights = new HashMap<Integer, DocumentHighlight>();
+        this.iconStyleRanges = new HashMap<Integer, StyleRange>();
     }
 
 
@@ -64,9 +69,15 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     @Override
     protected void resetTextTo(final StyledDocument styledDocument) {
-        super.resetTextTo(styledDocument);
+        // order is important here: 1) Set the text, 2) update folding, 3)
+        // update style ranges
+        // If 2 & 3 are swapped, the folding blitzes the style ranges. That's
+        // why we no longer call super.resetTextTo()
+        setTextTo(styledDocument.getText());
         updateFoldingStructure(styledDocument.getPositions());
         this.highlights.clear();
+        this.iconStyleRanges.clear();
+        updateStyleRangesTo(styledDocument);
     }
 
 
@@ -103,6 +114,45 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
                 }
             }
         }
+        viewer.getTextWidget().redraw();
+    }
+
+
+    protected void hideIconsInRange(final int offset, final int length) {
+        final int end = offset + length;
+
+        final int thisLine = lineNumberOfMasterOffset(offset);
+        final int nextLineOffset = offsetOfMasterLineNumber(thisLine + 1);
+
+        if (nextLineOffset < end) {
+            for (final Integer iconStyleRangeOffset : iconStyleRanges.keySet()) {
+                if (iconStyleRangeOffset.intValue() >= nextLineOffset && iconStyleRangeOffset.intValue() < end) {
+                    final StyleRange styleRange = iconStyleRanges.get(iconStyleRangeOffset);
+                    viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
+                }
+            }
+        }
+    }
+
+
+    protected void rerunIconStyleRangesInRange(final int offset, final int length) {
+        final int end = offset + length;
+
+        for (final Integer iconStyleRangeOffset : iconStyleRanges.keySet()) {
+            if (iconStyleRangeOffset.intValue() >= offset && iconStyleRangeOffset.intValue() < end) {
+                viewer.getTextWidget().setStyleRange(iconStyleRanges.get(iconStyleRangeOffset));
+            }
+        }
+    }
+
+
+    @Override
+    protected StyleRange createIconStyleRange(final int offset) {
+        final StyleRange styleRange = super.createIconStyleRange(offset);
+
+        this.iconStyleRanges.put(Integer.valueOf(offset), styleRange);
+
+        return styleRange;
     }
 
 
@@ -121,9 +171,22 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
             annotations[i] = annotation;
         }
 
-        annotationModel.modifyAnnotations(oldAnnotations, newAnnotations, null);
+        if (oldAnnotations != null) {
+            for (final Annotation oldAnnotation : oldAnnotations) {
+                annotationModel.removeAnnotation(oldAnnotation);
+            }
+        }
+
+        for (final Annotation newAnnotation : newAnnotations.keySet()) {
+            annotationModel.addAnnotation(newAnnotation, newAnnotations.get(newAnnotation));
+        }
 
         oldAnnotations = annotations;
+    }
+
+
+    protected int projectedOffsetToMasterOffset(final int projectedOffset) {
+        return viewer.masterDocumentOffset(projectedOffset);
     }
 
 
@@ -174,7 +237,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         final IAnnotationAccess annotationAccess = new DefaultMarkerAnnotationAccess();
         final ISharedTextColors textColours = EditorsUI.getSharedTextColors();
         final IOverviewRuler overviewRuler = new OverviewRuler(annotationAccess, 10, textColours);
-        viewer = new MappingEnabledProjectionViewer(parent, ruler, overviewRuler, true, SWT.NONE);
+        viewer = new MappingEnabledProjectionViewer(parent, ruler, overviewRuler, true, SWT.V_SCROLL | SWT.H_SCROLL);
         final Document document = new Document();
         viewer.setDocument(document, new AnnotationModel());
         final ProjectionSupport projectionSupport = new ProjectionSupport(viewer, annotationAccess, textColours);
@@ -213,7 +276,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
                 doIconOperation(nextLineOffset, new Callback1<RenderedText>() {
                     @Override
                     public void callback(final RenderedText t) {
-                        if (t.isRendered() && t.getOffset() > mappedEnd) {
+                        if (t.isRendered()) {
                             t.transposeBy(mappedEnd - nextLineOffset);
                         }
                     }
@@ -256,13 +319,14 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
         @Override
         public void textHidden(final int offset, final int length) {
-            // No-op
+            hideIconsInRange(offset, length);
         }
 
 
         @Override
         public void textVisible(final int offset, final int length) {
             rerunHighlightsInRange(offset, offset + length);
+            rerunIconStyleRangesInRange(offset, length);
         }
 
     }

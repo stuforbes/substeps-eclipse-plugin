@@ -139,15 +139,15 @@ public class TextModelFragment implements HierarchicalTextStructure {
     public void markFailed() {
         // only do this for leaf nodes - parents can sort themselves out from
         // that
-        if (numChildren == 0) {
-            updateStateTo(TextState.Failed);
-            doToAncestry(new Callback1<TextModelFragment>() {
-                @Override
-                public void callback(final TextModelFragment t) {
-                    t.updateStateTo(TextState.SubNodeFailed);
-                }
-            });
-        }
+        // if (numChildren == 0) {
+        updateStateTo(TextState.Failed);
+        doToAncestry(new Callback1<TextModelFragment>() {
+            @Override
+            public void callback(final TextModelFragment t) {
+                t.updateStateTo(TextState.SubNodeFailed);
+            }
+        });
+        // }
     }
 
 

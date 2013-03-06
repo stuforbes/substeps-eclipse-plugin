@@ -7,16 +7,11 @@ import java.util.Map;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.PaintObjectEvent;
-import org.eclipse.swt.custom.PaintObjectListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.GlyphMetrics;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
@@ -25,6 +20,7 @@ import com.technophobia.eclipse.transformer.Callback1;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
+import com.technophobia.substeps.supplier.Supplier;
 import com.technophobia.substeps.supplier.Transformer;
 import com.technophobia.substeps.ui.component.ListDelegateHierarchicalTextCollection;
 import com.technophobia.substeps.ui.component.StyledDocumentSubstepsTextExecutionReporter;
@@ -47,12 +43,12 @@ public class StyledTextRunnerView implements RunnerView {
 
     private StyledText textComponent;
     private final ColourManager colourManager;
-
-    private final SubstepsIconProvider iconProvider;
+    private PaintListener paintIconsListener;
 
     private List<RenderedText> icons;
 
     private final StyledDocumentUpdater styledDocumentUpdater;
+    private final SubstepsIconProvider iconProvider;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
@@ -70,6 +66,7 @@ public class StyledTextRunnerView implements RunnerView {
     public void createPartControl(final Composite parent) {
 
         textComponent = createTextComponent(parent);
+        this.paintIconsListener = new PaintRenderedTextListener(textComponent, iconProvider, supplyRenderedTexts());
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -77,37 +74,14 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.setLineSpacing(5);
         textComponent.setEditable(false);
 
-        textComponent.addPaintListener(new PaintListener() {
+        textComponent.addPaintListener(paintIconsListener);
 
-            @Override
-            public void paintControl(final PaintEvent event) {
-                final GC gc = event.gc;
-                // final StyleRange style = event.style;
-                // final int start = style.start;
-                for (final RenderedText icon : icons) {
-                    if (icon.isRendered()) {
-                        final Image image = iconProvider.imageFor(icon.getIcon());
-
-                        final Point locationAtOffset = icon.getLocation();
-                        gc.drawImage(image, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, locationAtOffset.x,
-                                locationAtOffset.y + 2, IMAGE_WIDTH, IMAGE_HEIGHT);
-                    }
-                }
-            }
-        });
-
-        textComponent.addPaintObjectListener(new PaintObjectListener() {
-
-            @Override
-            public void paintObject(final PaintObjectEvent event) {
-
-            }
-        });
     }
 
 
     @Override
     public void dispose() {
+        textComponent.removePaintListener(paintIconsListener);
         textComponent.dispose();
         textComponent = null;
 
@@ -128,19 +102,24 @@ public class StyledTextRunnerView implements RunnerView {
 
 
     protected StyledText createTextComponent(final Composite parent) {
-        return new StyledText(parent, SWT.BORDER);
+        return new StyledText(parent, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
     }
 
 
     protected void resetTextTo(final StyledDocument styledDocument) {
-        textComponent.setStyleRange(null);
         setTextTo(styledDocument.getText());
 
+        updateStyleRangesTo(styledDocument);
+
+        textComponent.redraw();
+    }
+
+
+    protected void updateStyleRangesTo(final StyledDocument styledDocument) {
+        textComponent.setStyleRange(null);
         final int lineCount = textComponent.getLineCount();
         icons = new ArrayList<RenderedText>(lineCount);
         prepareTextStyleRanges(textComponent.getLineCount(), styledDocument.getOffsetToParentOffsetMapping());
-
-        textComponent.redraw();
     }
 
 
@@ -161,10 +140,13 @@ public class StyledTextRunnerView implements RunnerView {
 
             final Integer parentOffset = offsetToParentOffsetMap.get(Integer.valueOf(offset));
 
-            final RenderedText renderedText = createIconStyleRange(offset,
+            final RenderedText renderedText = createRenderedText(offset,
                     parentOffset != null ? lineNumberToTextMapping.get(parentOffset) : null);
             icons.add(renderedText);
             lineNumberToTextMapping.put(Integer.valueOf(offset), renderedText);
+
+            // final StyleRange styleRange = createIconStyleRange(offset);
+            // textComponent.setStyleRange(styleRange);
 
             createUnprocessedTextStyleRange(i, offset);
         }
@@ -177,13 +159,17 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
-    protected RenderedText createIconStyleRange(final int offset, final RenderedText parent) {
+    protected StyleRange createIconStyleRange(final int offset) {
         final StyleRange style = new StyleRange();
-        // textComponent.replaceTextRange(offset, 1, "\uFFFC");
+        textComponent.replaceTextRange(offset, 1, "\uFFFC");
         style.start = offset;
         style.length = 1;
         style.metrics = new GlyphMetrics(IMAGE_HEIGHT, 0, IMAGE_WIDTH);
-        textComponent.setStyleRange(style);
+        return style;
+    }
+
+
+    protected RenderedText createRenderedText(final int offset, final RenderedText parent) {
         return new RenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent, offsetToPointTransformer);
     }
 
@@ -268,6 +254,17 @@ public class StyledTextRunnerView implements RunnerView {
             @Override
             public Point from(final Integer offset) {
                 return textComponent.getLocationAtOffset(offset.intValue());
+            }
+        };
+    }
+
+
+    private Supplier<List<RenderedText>> supplyRenderedTexts() {
+        return new Supplier<List<RenderedText>>() {
+
+            @Override
+            public List<RenderedText> get() {
+                return icons;
             }
         };
     }

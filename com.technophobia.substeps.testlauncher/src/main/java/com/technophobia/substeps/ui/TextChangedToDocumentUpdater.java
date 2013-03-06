@@ -34,7 +34,10 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
     @Override
     public void highlight(final HierarchicalTextStructure t) {
         final TextModelFragment textFragment = (TextModelFragment) t;
-        updater.highlightChanged(highlightEventFor(textFragment.textState()), toHighlight(textFragment));
+        // We don't update the feature line at the very top
+        if (textFragment.lineNumber() > 0) {
+            updater.highlightChanged(highlightEventFor(textFragment.textState()), toHighlight(textFragment));
+        }
     }
 
 
