@@ -173,8 +173,7 @@ public class StyledTextRunnerView implements RunnerView {
 
     private void createUnprocessedTextStyleRange(final int line, final int offset) {
         final int length = textComponent.getLine(line).length() - 1;
-        textComponent.setStyleRange(new StyleRange(offset + 1, length, colourManager.getColor(GREY), colourManager
-                .getColor(WHITE), SWT.NONE));
+        addHighlight(new DocumentHighlight(line, length, GREY));
     }
 
 

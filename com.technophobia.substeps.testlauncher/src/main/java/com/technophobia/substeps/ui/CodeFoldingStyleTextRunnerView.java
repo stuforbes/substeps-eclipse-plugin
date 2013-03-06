@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
@@ -25,8 +27,10 @@ import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
+import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
 
 public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
@@ -36,9 +40,16 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     private Annotation[] oldAnnotations;
 
+    // Map of all highlights, keyed on line number. The reason it's keyed on
+    // line number is so that new updates for a line
+    // overwrite previous ones. For example, a test passed highlight should
+    // replace a now processing highlight
+    private final Map<Integer, DocumentHighlight> highlights;
+
 
     public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
         super(colourManager, iconProvider);
+        this.highlights = new HashMap<Integer, DocumentHighlight>();
     }
 
 
@@ -55,6 +66,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     protected void resetTextTo(final StyledDocument styledDocument) {
         super.resetTextTo(styledDocument);
         updateFoldingStructure(styledDocument.getPositions());
+        this.highlights.clear();
     }
 
 
@@ -67,6 +79,30 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     @Override
     protected void setTextTo(final String text) {
         viewer.getDocument().set(text);
+    }
+
+
+    @Override
+    protected void addHighlight(final DocumentHighlight highlight) {
+        super.addHighlight(highlight);
+
+        this.highlights.put(Integer.valueOf(highlight.getLine()), highlight);
+    }
+
+
+    protected void rerunHighlightsInRange(final int start, final int end) {
+        // need to use master document, not text widget
+        final int startLine = lineNumberOfMasterOffset(start);
+        final int endLine = lineNumberOfMasterOffset(end - 1);
+        for (final DocumentHighlight highlight : highlights.values()) {
+            if (highlight.getLine() >= startLine && highlight.getLine() <= endLine) {
+                final int projectedLineNumber = masterLineToProjectedLine(highlight.getLine());
+                if (projectedLineNumber >= 0) {
+                    super.addHighlight(new DocumentHighlight(projectedLineNumber, highlight.getLength(), highlight
+                            .getColour()));
+                }
+            }
+        }
     }
 
 
@@ -96,13 +132,40 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     }
 
 
-    protected int lineNumberOfOffset(final int offset) {
+    protected int masterLineToProjectedLine(final int masterLine) {
+        return viewer.projectedLineNumber(masterLine);
+    }
+
+
+    protected int lineNumberOfProjectedOffset(final int offset) {
         return viewer.getTextWidget().getLineAtOffset(offset);
     }
 
 
-    protected int offsetOfLineNumber(final int lineNumber) {
+    protected int offsetOfProjectedLineNumber(final int lineNumber) {
         return viewer.getTextWidget().getOffsetAtLine(lineNumber);
+    }
+
+
+    protected int lineNumberOfMasterOffset(final int offset) {
+        try {
+            return viewer.getDocument().getLineOfOffset(offset);
+        } catch (final BadLocationException ex) {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not get line number for offset " + offset
+                    + ", returning -1");
+            return -1;
+        }
+    }
+
+
+    protected int offsetOfMasterLineNumber(final int lineNumber) {
+        try {
+            return viewer.getDocument().getLineOffset(lineNumber);
+        } catch (final BadLocationException e) {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not get offset for line number" + lineNumber
+                    + ", returning -1");
+            return -1;
+        }
     }
 
 
@@ -122,88 +185,85 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
         annotationModel = viewer.getProjectionAnnotationModel();
 
-        annotationModel.addAnnotationModelListener(new ToggleTextVisibilityOnCodeFoldingListener(
-                new TextRegionVisibilityToggle() {
+        final TextRegionVisibilityToggle toggle = new CompositeVisiblityToggle(
+                new UpdateRenderedTextVisibilityToggle(), //
+                new UpdateStyleRangesVisibilityToggle() //
+        );
 
+        annotationModel.addAnnotationModelListener(new ToggleTextVisibilityOnCodeFoldingListener(toggle));
+    }
+
+    private final class UpdateRenderedTextVisibilityToggle implements TextRegionVisibilityToggle {
+
+        @Override
+        public void textVisible(final int offset, final int length) {
+            final int end = offset + length;
+
+            // Offset and length come in relative to source document
+            // (ie fully expanded)
+            final int mappedStart = masterOffsetToProjectedOffset(offset);
+            final int mappedEnd = masterOffsetToProjectedOffset(end);
+
+            // find the offset of the next line, as when expanding,
+            // the expand target has remained visible throughout
+            final int lineNumber = lineNumberOfProjectedOffset(mappedStart);
+            final int nextLineOffset = offsetOfProjectedLineNumber(lineNumber + 1);
+            if (nextLineOffset < mappedEnd) {
+
+                doIconOperation(nextLineOffset, new Callback1<RenderedText>() {
                     @Override
-                    public void textVisible(final int offset, final int length) {
-                        final int end = offset + length;
-
-                        // Offset and length come in relative to source document
-                        // (ie fully expanded)
-                        final int mappedStart = masterOffsetToProjectedOffset(offset);
-                        final int mappedEnd = masterOffsetToProjectedOffset(end);
-
-                        // find the offset of the next line, as when expanding,
-                        // the expand target has remained visible throughout
-                        final int lineNumber = lineNumberOfOffset(mappedStart);
-                        final int nextLineOffset = offsetOfLineNumber(lineNumber + 1);
-                        if (nextLineOffset < mappedEnd) {
-
-                            doIconOperation(nextLineOffset, new Callback1<RenderedText>() {
-                                @Override
-                                public void callback(final RenderedText t) {
-                                    // if the offset is in range, but it was
-                                    // previously rendered, that means it was
-                                    // transposed by previously collapsing this
-                                    // node
-                                    if (!t.isRendered()) {
-                                        // t.transposeBy(mappedEnd -
-                                        // nextLineOffset);
-                                        // t.expand();
-                                    } else {
-                                        t.transposeBy(mappedEnd - nextLineOffset);
-                                    }
-                                }
-                            });
-
-                            doIconOperation(mappedStart - 1, 2, new Callback1<RenderedText>() {
-
-                                @Override
-                                public void callback(final RenderedText t) {
-                                    t.expand();
-                                }
-                            });
+                    public void callback(final RenderedText t) {
+                        if (t.isRendered() && t.getOffset() > mappedEnd) {
+                            t.transposeBy(mappedEnd - nextLineOffset);
                         }
                     }
+                });
+
+                doIconOperation(mappedStart - 1, 2, new ExpandTextCallback());
+            }
+        }
 
 
+        @Override
+        public void textHidden(final int offset, final int length) {
+            // Offset and length come in relative to source document
+            // (ie fully expanded)
+            final int mappedStart = masterOffsetToProjectedOffset(offset);
+            final int mappedEnd = mappedStart + length;
+
+            // find the offset of the next line, as when collapsing,
+            // we still show the icons of the collapse target, just
+            // hide the nested lines
+            final int lineNumber = lineNumberOfProjectedOffset(mappedStart);
+            final int nextLineOffset = offsetOfProjectedLineNumber(lineNumber + 1);
+            if (nextLineOffset < mappedEnd) {
+
+                doIconOperation(mappedStart - 1, 2, new CollapseTextCallback());
+
+                doIconOperation(mappedStart, new Callback1<RenderedText>() {
                     @Override
-                    public void textHidden(final int offset, final int length) {
-                        final int end = offset + length;
-
-                        // Offset and length come in relative to source document
-                        // (ie fully expanded)
-                        final int mappedStart = masterOffsetToProjectedOffset(offset);
-                        final int mappedEnd = mappedStart + length;
-
-                        // find the offset of the next line, as when collapsing,
-                        // we still show the icons of the collapse target, just
-                        // hide the nested lines
-                        final int lineNumber = lineNumberOfOffset(mappedStart);
-                        final int nextLineOffset = offsetOfLineNumber(lineNumber + 1);
-                        if (nextLineOffset < mappedEnd) {
-
-                            doIconOperation(mappedStart - 1, 2, new Callback1<RenderedText>() {
-
-                                @Override
-                                public void callback(final RenderedText t) {
-                                    t.collapse();
-                                }
-                            });
-
-                            doIconOperation(mappedStart, new Callback1<RenderedText>() {
-                                @Override
-                                public void callback(final RenderedText t) {
-                                    if (t.getOffset() < mappedEnd) {
-                                        // t.disableRendering();
-                                    } else {
-                                        t.transposeBy(-1 * (mappedEnd - nextLineOffset));
-                                    }
-                                }
-                            });
+                    public void callback(final RenderedText t) {
+                        if (t.getOffset() >= mappedEnd) {
+                            t.transposeBy(-1 * (mappedEnd - nextLineOffset));
                         }
                     }
-                }));
+                });
+            }
+        }
+    }
+
+    private final class UpdateStyleRangesVisibilityToggle implements TextRegionVisibilityToggle {
+
+        @Override
+        public void textHidden(final int offset, final int length) {
+            // No-op
+        }
+
+
+        @Override
+        public void textVisible(final int offset, final int length) {
+            rerunHighlightsInRange(offset, offset + length);
+        }
+
     }
 }
