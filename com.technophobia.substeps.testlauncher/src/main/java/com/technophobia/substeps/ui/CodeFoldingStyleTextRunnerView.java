@@ -1,6 +1,7 @@
 package com.technophobia.substeps.ui;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
         super(colourManager, iconProvider);
         this.highlights = new HashMap<Integer, DocumentHighlight>();
-        this.iconStyleRanges = new HashMap<Integer, StyleRange>();
+        this.iconStyleRanges = new LinkedHashMap<Integer, StyleRange>();
     }
 
 
@@ -114,32 +115,40 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
                 }
             }
         }
-        viewer.getTextWidget().redraw();
     }
 
 
     protected void hideIconsInRange(final int offset, final int length) {
-        final int end = offset + length;
-
-        final int thisLine = lineNumberOfMasterOffset(offset);
-        final int nextLineOffset = offsetOfMasterLineNumber(thisLine + 1);
-
-        if (nextLineOffset < end) {
-            for (final Integer iconStyleRangeOffset : iconStyleRanges.keySet()) {
-                if (iconStyleRangeOffset.intValue() >= nextLineOffset && iconStyleRangeOffset.intValue() < end) {
-                    final StyleRange styleRange = iconStyleRanges.get(iconStyleRangeOffset);
-                    viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
-                }
-            }
-        }
+        // final int end = offset + length;
+        //
+        // final int thisLine = lineNumberOfMasterOffset(offset);
+        // final int nextLineOffset = offsetOfMasterLineNumber(thisLine + 1);
+        // final int lengthFromNextLineOffset = end - nextLineOffset;
+        //
+        // if (nextLineOffset < end) {
+        // // for (final Integer iconStyleRangeOffset : new
+        // // ArrayList<Integer>(iconStyleRanges.keySet())) {
+        // // if (iconStyleRangeOffset.intValue() >= nextLineOffset) {
+        // // final StyleRange styleRange =
+        // // iconStyleRanges.get(iconStyleRangeOffset);
+        // // viewer.getTextWidget().replaceStyleRanges(styleRange.start,
+        // // styleRange.length, new StyleRange[0]);
+        // //
+        // // if (iconStyleRangeOffset.intValue() >= end) {
+        // // final StyleRange newStyleRange =
+        // // createIconStyleRange(styleRange.start
+        // // - lengthFromNextLineOffset);
+        // // viewer.getTextWidget().setStyleRange(newStyleRange);
+        // // }
+        // // }
+        // // }
+        // }
     }
 
 
     protected void rerunIconStyleRangesInRange(final int offset, final int length) {
-        final int end = offset + length;
-
         for (final Integer iconStyleRangeOffset : iconStyleRanges.keySet()) {
-            if (iconStyleRangeOffset.intValue() >= offset && iconStyleRangeOffset.intValue() < end) {
+            if (iconStyleRangeOffset.intValue() >= offset) {
                 viewer.getTextWidget().setStyleRange(iconStyleRanges.get(iconStyleRangeOffset));
             }
         }

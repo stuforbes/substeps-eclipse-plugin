@@ -7,13 +7,14 @@ import java.util.Map;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.PaintObjectListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 
 import com.technophobia.eclipse.transformer.Callback1;
@@ -32,7 +33,7 @@ import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
 
-public class StyledTextRunnerView implements RunnerView {
+public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
 
     private static final RGB WHITE = new RGB(255, 255, 255);
     private static final RGB GREY = new RGB(128, 128, 128);
@@ -43,7 +44,7 @@ public class StyledTextRunnerView implements RunnerView {
 
     private StyledText textComponent;
     private final ColourManager colourManager;
-    private PaintListener paintIconsListener;
+    private PaintObjectListener paintIconsListener;
 
     private List<RenderedText> icons;
 
@@ -66,7 +67,8 @@ public class StyledTextRunnerView implements RunnerView {
     public void createPartControl(final Composite parent) {
 
         textComponent = createTextComponent(parent);
-        this.paintIconsListener = new PaintRenderedTextListener(textComponent, iconProvider, supplyRenderedTexts());
+        this.paintIconsListener = new PaintRenderedTextListener(textComponent, iconProvider, supplyRenderedTexts(),
+                colourManager);
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -74,14 +76,14 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.setLineSpacing(5);
         textComponent.setEditable(false);
 
-        textComponent.addPaintListener(paintIconsListener);
+        textComponent.addPaintObjectListener(paintIconsListener);
 
     }
 
 
     @Override
     public void dispose() {
-        textComponent.removePaintListener(paintIconsListener);
+        textComponent.removePaintObjectListener(paintIconsListener);
         textComponent.dispose();
         textComponent = null;
 
@@ -98,6 +100,15 @@ public class StyledTextRunnerView implements RunnerView {
                 stateChangeHighlighter);
         return new StyledDocumentSubstepsTextExecutionReporter(textCollection, textModelFragmentFactory,
                 stateChangeHighlighter);
+    }
+
+
+    @Override
+    public Rectangle scrollViewBounds() {
+        final int topIndex = textComponent.getTopIndex();
+        final Point location = textComponent.getLocationAtOffset(textComponent.getOffsetAtLine(topIndex));
+        final Rectangle clientArea = textComponent.getClientArea();
+        return new Rectangle(location.x, location.y, clientArea.width, clientArea.height);
     }
 
 
@@ -145,8 +156,8 @@ public class StyledTextRunnerView implements RunnerView {
             icons.add(renderedText);
             lineNumberToTextMapping.put(Integer.valueOf(offset), renderedText);
 
-            // final StyleRange styleRange = createIconStyleRange(offset);
-            // textComponent.setStyleRange(styleRange);
+            final StyleRange styleRange = createIconStyleRange(offset);
+            textComponent.setStyleRange(styleRange);
 
             createUnprocessedTextStyleRange(i, offset);
         }

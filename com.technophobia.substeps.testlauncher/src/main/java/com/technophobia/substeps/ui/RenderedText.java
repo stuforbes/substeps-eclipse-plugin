@@ -10,7 +10,6 @@ public class RenderedText {
     private boolean expanded;
     private SubstepsIcon icon;
     private int offset;
-    private Point location;
     private final Transformer<Integer, Point> offsetToPointTransformer;
     private final RenderedText parent;
 
@@ -22,7 +21,6 @@ public class RenderedText {
         this.offset = offset;
         this.parent = parent;
         this.offsetToPointTransformer = offsetToPointTransformer;
-        this.location = offsetToPointTransformer.from(Integer.valueOf(offset));
     }
 
 
@@ -62,13 +60,12 @@ public class RenderedText {
 
 
     public Point getLocation() {
-        return location;
+        return offsetToPointTransformer.from(Integer.valueOf(offset));
     }
 
 
     public void transposeBy(final int amount) {
         this.offset += amount;
-        this.location = offsetToPointTransformer.from(Integer.valueOf(offset));
     }
 
 
@@ -78,7 +75,6 @@ public class RenderedText {
         int result = 1;
         result = prime * result + (expanded ? 1231 : 1237);
         result = prime * result + ((icon == null) ? 0 : icon.hashCode());
-        result = prime * result + ((location == null) ? 0 : location.hashCode());
         result = prime * result + offset;
         result = prime * result + ((offsetToPointTransformer == null) ? 0 : offsetToPointTransformer.hashCode());
         result = prime * result + ((parent == null) ? 0 : parent.hashCode());
@@ -98,11 +94,6 @@ public class RenderedText {
         if (expanded != other.expanded)
             return false;
         if (icon != other.icon)
-            return false;
-        if (location == null) {
-            if (other.location != null)
-                return false;
-        } else if (!location.equals(other.location))
             return false;
         if (offset != other.offset)
             return false;
