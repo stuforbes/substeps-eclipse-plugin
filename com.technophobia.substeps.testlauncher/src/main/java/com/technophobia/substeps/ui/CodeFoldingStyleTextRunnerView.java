@@ -1,7 +1,6 @@
 package com.technophobia.substeps.ui;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +39,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     private MappingEnabledProjectionViewer viewer;
     private ProjectionAnnotationModel annotationModel;
+    private ProjectedTextPositionCalculator textPositionCalculator;
 
     private Annotation[] oldAnnotations;
 
@@ -49,18 +49,12 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     // replace a now processing highlight
     private final Map<Integer, DocumentHighlight> highlights;
 
-    // Map of all icon style ranges, keyed on offset.
-    private final Map<Integer, StyleRange> iconStyleRanges;
-
     private final Transformer<Integer, Integer> masterToProjectedOffsetTransformer;
-    private final ColourManager colourManager;
 
 
     public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
         super(colourManager, iconProvider);
-        this.colourManager = colourManager;
         this.highlights = new HashMap<Integer, DocumentHighlight>();
-        this.iconStyleRanges = new LinkedHashMap<Integer, StyleRange>();
         this.masterToProjectedOffsetTransformer = initMasterToProjectedOffsetTransformer();
     }
 
@@ -83,7 +77,6 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         setTextTo(styledDocument.getText());
         updateFoldingStructure(styledDocument.getPositions());
         this.highlights.clear();
-        this.iconStyleRanges.clear();
         updateStyleRangesTo(styledDocument);
     }
 
@@ -91,7 +84,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     @Override
     protected RenderedText createRenderedText(final int offset, final RenderedText parent) {
         return new ProjectedRenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent,
-                offsetToPointTransformer(), masterToProjectedOffsetTransformer);
+                masterToProjectedOffsetTransformer);
     }
 
 
@@ -122,36 +115,26 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         final int hiddenStartOffset = offsetOfMasterLineNumber(hiddenStartLine);
         final int end = start + length;
 
-        final int projectedStart = masterOffsetToProjectedOffset(start);
+        final int projectedStart = textPositionCalculator.masterOffsetToProjectedOffset(start);
 
         final StyleRange[] styleRanges = viewer.getTextWidget().getStyleRanges(projectedStart,
                 viewer.getTextWidget().getCharCount() - projectedStart);
 
         for (final StyleRange styleRange : styleRanges) {
-            if (styleRange.start >= hiddenStartOffset && styleRange.metrics == null) {
+            if (styleRange.start >= hiddenStartOffset) {
                 viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
             }
         }
 
         for (final Integer offset : highlights.keySet()) {
-            if (offset.intValue() >= end && masterOffsetToProjectedOffset(offset.intValue()) > -1) {
+            final int projectedOffset = textPositionCalculator.masterOffsetToProjectedOffset(offset.intValue());
+            if (offset.intValue() >= end && projectedOffset > -1) {
                 final DocumentHighlight documentHighlight = highlights.get(offset);
-                super.addHighlight(documentHighlight);
+                final StyleRange newStyleRange = documentHighlightToStyleRangeTransformer().from(documentHighlight);
+                newStyleRange.start = projectedOffset;
+                viewer.getTextWidget().setStyleRange(newStyleRange);
             }
         }
-
-        // viewer.getTextWidget().replaceStyleRanges(0,
-        // viewer.getTextWidget().getCharCount(), new StyleRange[0]);
-
-        //
-        // for (final DocumentHighlight highlight : oldValues) {
-        // final int line = highlight.getLine();
-        // final int newProjectedLine = masterLineToProjectedLine(line);
-        // addHighlight(new DocumentHighlight(newProjectedLine,
-        // highlight.getLength(), highlight.getColour()));
-        // }
-
-        // addHighlight(new DocumentHighlight(4, 9, new RGB(0, 43, 138)));
     }
 
 
@@ -163,79 +146,14 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
                 // if the highlight is still hidden, its projected offset will
                 // be -1
-                final int projectedOffset = masterOffsetToProjectedOffset(highlight.getOffset());
+                final int projectedOffset = textPositionCalculator.masterOffsetToProjectedOffset(highlight.getOffset());
                 if (projectedOffset >= 0) {
-                    viewer.getTextWidget().setStyleRange(styleRangeFromHighlight(highlight));
-                }
-            }
-        }
-    }
-
-
-    @Override
-    protected StyleRange styleRangeFromHighlight(final DocumentHighlight highlight) {
-        FeatureRunnerPlugin.log(IStatus.INFO,
-                "Creating fold-aware style range. Source offset was " + highlight.getOffset()
-                        + ", projected offset is " + masterOffsetToProjectedOffset(highlight.getOffset()));
-        return new StyleRange(masterOffsetToProjectedOffset(highlight.getOffset()) + 1, highlight.getLength(),
-                colourManager.getColor(highlight.getColour()), colourManager.getColor(WHITE),
-                highlight.isBold() ? SWT.BOLD : SWT.NONE);
-    }
-
-
-    protected void hideIconsInRange(final int start, final int length) {
-        final int hiddenLine = lineNumberOfMasterOffset(start);
-        final int hiddenStartLine = hiddenLine + 1;
-        final int hiddenStartOffset = offsetOfMasterLineNumber(hiddenStartLine);
-        final int end = start + length;
-
-        final int projectedStart = masterOffsetToProjectedOffset(start);
-
-        final StyleRange[] styleRanges = viewer.getTextWidget().getStyleRanges(start,
-                viewer.getTextWidget().getCharCount() - start);
-
-        for (final StyleRange styleRange : styleRanges) {
-            if (styleRange.start >= hiddenStartOffset && styleRange.metrics != null) {
-                viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
-            }
-        }
-
-        for (final Integer offset : iconStyleRanges.keySet()) {
-            if (offset.intValue() >= end && masterOffsetToProjectedOffset(offset.intValue()) > -1) {
-                final StyleRange styleRange = iconStyleRanges.get(offset);
-                final StyleRange newStyleRange = super
-                        .createIconStyleRange(masterOffsetToProjectedOffset(styleRange.start));
-                viewer.getTextWidget().setStyleRange(newStyleRange);
-            }
-        }
-    }
-
-
-    protected void rerunIconStyleRangesInRange(final int start, final int length) {
-        for (final Integer offset : iconStyleRanges.keySet()) {
-            if (offset.intValue() > start && offset.intValue() <= start + length) {
-
-                final StyleRange styleRange = iconStyleRanges.get(offset);
-
-                // if the style range is still hidden, its projected offset will
-                // be -1
-                final int projectedOffset = masterOffsetToProjectedOffset(styleRange.start);
-                if (projectedOffset >= 0) {
-                    final StyleRange newStyleRange = super.createIconStyleRange(projectedOffset);
+                    final StyleRange newStyleRange = documentHighlightToStyleRangeTransformer().from(highlight);
+                    newStyleRange.start = projectedOffset;
                     viewer.getTextWidget().setStyleRange(newStyleRange);
                 }
             }
         }
-    }
-
-
-    @Override
-    protected StyleRange createIconStyleRange(final int offset) {
-        final StyleRange styleRange = super.createIconStyleRange(offset);
-
-        this.iconStyleRanges.put(Integer.valueOf(offset), styleRange);
-
-        return styleRange;
     }
 
 
@@ -268,31 +186,6 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     }
 
 
-    protected int projectedOffsetToMasterOffset(final int projectedOffset) {
-        return viewer.masterDocumentOffset(projectedOffset);
-    }
-
-
-    protected int masterOffsetToProjectedOffset(final int masterOffset) {
-        return viewer.projectedOffset(masterOffset);
-    }
-
-
-    protected int masterLineToProjectedLine(final int masterLine) {
-        return viewer.projectedLineNumber(masterLine);
-    }
-
-
-    protected int lineNumberOfProjectedOffset(final int offset) {
-        return viewer.getTextWidget().getLineAtOffset(offset);
-    }
-
-
-    protected int offsetOfProjectedLineNumber(final int lineNumber) {
-        return viewer.getTextWidget().getOffsetAtLine(lineNumber);
-    }
-
-
     protected int lineNumberOfMasterOffset(final int offset) {
         try {
             return viewer.getDocument().getLineOfOffset(offset);
@@ -319,7 +212,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         return new Transformer<Integer, Integer>() {
             @Override
             public Integer from(final Integer from) {
-                return Integer.valueOf(masterOffsetToProjectedOffset(from.intValue()));
+                return Integer.valueOf(textPositionCalculator.masterOffsetToProjectedOffset(from.intValue()));
             }
         };
     }
@@ -339,6 +232,8 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         // turn projection mode on
         viewer.doOperation(ProjectionViewer.TOGGLE);
 
+        textPositionCalculator = new ProjectedTextPositionCalculator(viewer);
+
         annotationModel = viewer.getProjectionAnnotationModel();
 
         final TextRegionVisibilityToggle toggle = new CompositeVisiblityToggle(
@@ -357,13 +252,13 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
             // Offset and length come in relative to source document
             // (ie fully expanded)
-            final int mappedStart = masterOffsetToProjectedOffset(offset);
-            final int mappedEnd = masterOffsetToProjectedOffset(end);
+            final int mappedStart = textPositionCalculator.masterOffsetToProjectedOffset(offset);
+            final int mappedEnd = textPositionCalculator.masterOffsetToProjectedOffset(end);
 
             // find the offset of the next line, as when expanding,
             // the expand target has remained visible throughout
-            final int lineNumber = lineNumberOfProjectedOffset(mappedStart);
-            final int nextLineOffset = offsetOfProjectedLineNumber(lineNumber + 1);
+            final int lineNumber = textPositionCalculator.lineNumberOfProjectedOffset(mappedStart);
+            final int nextLineOffset = textPositionCalculator.offsetOfProjectedLineNumber(lineNumber + 1);
             if (nextLineOffset < mappedEnd) {
 
                 doIconOperation(mappedStart - 1, 2, new ExpandTextCallback());
@@ -375,14 +270,14 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         public void textHidden(final int offset, final int length) {
             // Offset and length come in relative to source document
             // (ie fully expanded)
-            final int mappedStart = masterOffsetToProjectedOffset(offset);
+            final int mappedStart = textPositionCalculator.masterOffsetToProjectedOffset(offset);
             final int mappedEnd = mappedStart + length;
 
             // find the offset of the next line, as when collapsing,
             // we still show the icons of the collapse target, just
             // hide the nested lines
-            final int lineNumber = lineNumberOfProjectedOffset(mappedStart);
-            final int nextLineOffset = offsetOfProjectedLineNumber(lineNumber + 1);
+            final int lineNumber = textPositionCalculator.lineNumberOfProjectedOffset(mappedStart);
+            final int nextLineOffset = textPositionCalculator.offsetOfProjectedLineNumber(lineNumber + 1);
             if (nextLineOffset < mappedEnd) {
 
                 doIconOperation(mappedStart - 1, 2, new CollapseTextCallback());
@@ -395,14 +290,12 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         @Override
         public void textHidden(final int offset, final int length) {
             hideHighlightsInRange(offset, length);
-            hideIconsInRange(offset, length);
         }
 
 
         @Override
         public void textVisible(final int offset, final int length) {
             rerunHighlightsInRange(offset, offset + length);
-            rerunIconStyleRangesInRange(offset, length);
         }
 
     }

@@ -11,10 +11,7 @@ import org.eclipse.swt.custom.PaintObjectListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.GlyphMetrics;
-import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 
 import com.technophobia.eclipse.transformer.Callback1;
@@ -30,36 +27,36 @@ import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEve
 import com.technophobia.substeps.ui.component.SubstepsIcon;
 import com.technophobia.substeps.ui.component.TextModelFragmentFactory;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
+import com.technophobia.substeps.ui.model.IconHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
+import com.technophobia.substeps.ui.model.TextHighlight;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
 
-public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
+public class StyledTextRunnerView implements RunnerView {
 
     protected static final RGB WHITE = new RGB(255, 255, 255);
     protected static final RGB GREY = new RGB(128, 128, 128);
     protected static final int IMAGE_HEIGHT = 10;
     protected static final int IMAGE_WIDTH = 10;
 
-    private final Transformer<Integer, Point> offsetToPointTransformer;
-
     private StyledText textComponent;
-    private final ColourManager colourManager;
     private PaintObjectListener paintIconsListener;
 
     private List<RenderedText> icons;
 
     private final StyledDocumentUpdater styledDocumentUpdater;
     private final SubstepsIconProvider iconProvider;
+    private final Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
-        this.colourManager = colourManager;
         this.iconProvider = iconProvider;
+        this.documentHighlightToStyleRangeTransformer = new InstanceAwareDocumentHighlightToStyleRangeTransformer(
+                colourManager);
 
         this.icons = new ArrayList<RenderedText>();
 
         this.styledDocumentUpdater = updateTextComponentCallback();
-        this.offsetToPointTransformer = initOffsetToPointTransformer();
     }
 
 
@@ -67,8 +64,7 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
     public void createPartControl(final Composite parent) {
 
         textComponent = createTextComponent(parent);
-        this.paintIconsListener = new PaintRenderedTextListener(textComponent, iconProvider, supplyRenderedTexts(),
-                colourManager);
+        this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyRenderedTexts());
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -103,15 +99,6 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
     }
 
 
-    @Override
-    public Rectangle scrollViewBounds() {
-        final int topIndex = textComponent.getTopIndex();
-        final Point location = textComponent.getLocationAtOffset(textComponent.getOffsetAtLine(topIndex));
-        final Rectangle clientArea = textComponent.getClientArea();
-        return new Rectangle(location.x, location.y, clientArea.width, clientArea.height);
-    }
-
-
     protected StyledText createTextComponent(final Composite parent) {
         return new StyledText(parent, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
     }
@@ -121,8 +108,6 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
         setTextTo(styledDocument.getText());
 
         updateStyleRangesTo(styledDocument);
-
-        textComponent.redraw();
     }
 
 
@@ -136,11 +121,6 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
 
     protected void setTextTo(final String text) {
         textComponent.setText(text);
-    }
-
-
-    protected Transformer<Integer, Point> offsetToPointTransformer() {
-        return offsetToPointTransformer;
     }
 
 
@@ -162,44 +142,35 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
             lineNumberToTextMapping.put(Integer.valueOf(offset), renderedText);
 
             textComponent.replaceTextRange(offset, 1, "\uFFFC");
-            final StyleRange styleRange = createIconStyleRange(offset);
-            textComponent.setStyleRange(styleRange);
 
-            createUnprocessedTextStyleRange(i, offset);
+            createUnprocessedHighlights(i, offset);
         }
     }
 
 
-    private void createUnprocessedTextStyleRange(final int line, final int offset) {
+    private void createUnprocessedHighlights(final int line, final int offset) {
         final int length = textComponent.getLine(line).length() - 1;
-        addHighlight(new DocumentHighlight(offset, length, GREY));
-    }
-
-
-    protected StyleRange createIconStyleRange(final int offset) {
-        final StyleRange style = new StyleRange();
-        style.start = offset;
-        style.length = 1;
-        style.metrics = new GlyphMetrics(IMAGE_HEIGHT, 0, IMAGE_WIDTH);
-        return style;
+        // Note the +1 for the offset. The offset is for the line, and position
+        // 0 of the line is reserved for the image StyleRange. By not using +1
+        // here, you will
+        // overwrite the lines image
+        addHighlight(new TextHighlight(offset + 1, length, GREY));
+        addHighlight(new IconHighlight(offset, 1, IMAGE_WIDTH, IMAGE_HEIGHT));
     }
 
 
     protected RenderedText createRenderedText(final int offset, final RenderedText parent) {
-        return new RenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent, offsetToPointTransformer());
+        return new RenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent);
+    }
+
+
+    protected Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer() {
+        return documentHighlightToStyleRangeTransformer;
     }
 
 
     protected void addHighlight(final DocumentHighlight highlight) {
-        textComponent.setStyleRange(styleRangeFromHighlight(highlight));
-    }
-
-
-    protected StyleRange styleRangeFromHighlight(final DocumentHighlight highlight) {
-        // StyleRange offset is line number offset + 1 - this is because the
-        // result icon is at position 0
-        return new StyleRange(highlight.getOffset() + 1, highlight.getLength(), colourManager.getColor(highlight
-                .getColour()), colourManager.getColor(WHITE), highlight.isBold() ? SWT.BOLD : SWT.NONE);
+        textComponent.setStyleRange(documentHighlightToStyleRangeTransformer.from(highlight));
     }
 
 
@@ -264,16 +235,6 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
                         resetTextTo(document);
                     }
                 });
-            }
-        };
-    }
-
-
-    private Transformer<Integer, Point> initOffsetToPointTransformer() {
-        return new Transformer<Integer, Point>() {
-            @Override
-            public Point from(final Integer offset) {
-                return textComponent.getLocationAtOffset(offset.intValue());
             }
         };
     }

@@ -1,8 +1,5 @@
 package com.technophobia.substeps.ui;
 
-import org.eclipse.swt.graphics.Point;
-
-import com.technophobia.substeps.supplier.Transformer;
 import com.technophobia.substeps.ui.component.SubstepsIcon;
 
 public class RenderedText {
@@ -11,17 +8,14 @@ public class RenderedText {
     private SubstepsIcon icon;
 
     private final int offset;
-    private final Transformer<Integer, Point> offsetToPointTransformer;
     private final RenderedText parent;
 
 
-    public RenderedText(final boolean isExpanded, final SubstepsIcon icon, final int offset, final RenderedText parent,
-            final Transformer<Integer, Point> offsetToPointTransformer) {
+    public RenderedText(final boolean isExpanded, final SubstepsIcon icon, final int offset, final RenderedText parent) {
         this.expanded = isExpanded;
         this.icon = icon;
         this.offset = offset;
         this.parent = parent;
-        this.offsetToPointTransformer = offsetToPointTransformer;
     }
 
 
@@ -60,11 +54,6 @@ public class RenderedText {
     }
 
 
-    public Point getLocation() {
-        return offsetToPointTransformer.from(Integer.valueOf(offset));
-    }
-
-
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -72,7 +61,6 @@ public class RenderedText {
         result = prime * result + (expanded ? 1231 : 1237);
         result = prime * result + ((icon == null) ? 0 : icon.hashCode());
         result = prime * result + offset;
-        result = prime * result + ((offsetToPointTransformer == null) ? 0 : offsetToPointTransformer.hashCode());
         result = prime * result + ((parent == null) ? 0 : parent.hashCode());
         return result;
     }
@@ -92,11 +80,6 @@ public class RenderedText {
         if (icon != other.icon)
             return false;
         if (offset != other.offset)
-            return false;
-        if (offsetToPointTransformer == null) {
-            if (other.offsetToPointTransformer != null)
-                return false;
-        } else if (!offsetToPointTransformer.equals(other.offsetToPointTransformer))
             return false;
         if (parent == null) {
             if (other.parent != null)

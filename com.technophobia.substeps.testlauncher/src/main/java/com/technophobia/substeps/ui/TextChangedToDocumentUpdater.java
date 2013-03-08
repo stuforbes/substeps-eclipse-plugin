@@ -18,6 +18,7 @@ import com.technophobia.substeps.ui.component.TextModelFragment;
 import com.technophobia.substeps.ui.component.TextModelFragment.TextState;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
+import com.technophobia.substeps.ui.model.TextHighlight;
 
 public class TextChangedToDocumentUpdater implements TextHighlighter {
 
@@ -93,7 +94,13 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
         return new Transformer<TextModelFragment, DocumentHighlight>() {
             @Override
             public DocumentHighlight from(final TextModelFragment textFragment) {
-                return new DocumentHighlight(textFragment.offset(), textFragment.length(), new RGB(r, g, b));
+                // Note the +1 for the offset. The offset is for the line, and
+                // position
+                // 0 of the line is reserved for the image StyleRange. By not
+                // using +1
+                // here, you will
+                // overwrite the lines image
+                return new TextHighlight(textFragment.offset() + 1, textFragment.length(), new RGB(r, g, b));
             }
         };
     }
@@ -104,7 +111,13 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
         return new Transformer<TextModelFragment, DocumentHighlight>() {
             @Override
             public DocumentHighlight from(final TextModelFragment textFragment) {
-                return new DocumentHighlight(textFragment.offset(), textFragment.length(), true, new RGB(r, g, b));
+                // Note the +1 for the offset. The offset is for the line, and
+                // position
+                // 0 of the line is reserved for the image StyleRange. By not
+                // using +1
+                // here, you will
+                // overwrite the lines image
+                return new TextHighlight(textFragment.offset() + 1, textFragment.length(), true, new RGB(r, g, b));
             }
         };
     }
