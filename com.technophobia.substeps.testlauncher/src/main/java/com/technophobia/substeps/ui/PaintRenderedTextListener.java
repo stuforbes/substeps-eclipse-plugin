@@ -2,7 +2,6 @@ package com.technophobia.substeps.ui;
 
 import java.util.List;
 
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.custom.PaintObjectEvent;
 import org.eclipse.swt.custom.PaintObjectListener;
 import org.eclipse.swt.custom.StyleRange;
@@ -14,7 +13,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 
-import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.supplier.Supplier;
@@ -47,7 +45,7 @@ public class PaintRenderedTextListener implements PaintListener, PaintObjectList
         if (!renderedTexts.isEmpty()) {
             for (final RenderedText renderedText : renderedTexts) {
                 if (renderedText.isRendered()) {
-                    final StyleRange styleRange = component.getStyleRangeAtOffset(renderedText.getOffset());
+                    final StyleRange styleRange = component.getStyleRangeAtOffset(offsetOf(renderedText));
                     if (styleRange != null) {
                         final Point locationAtOffset = renderedText.getLocation();
                         final Image image = iconProvider.imageFor(renderedText.getIcon());
@@ -95,24 +93,34 @@ public class PaintRenderedTextListener implements PaintListener, PaintObjectList
         final StyleRange style = event.style;
         final int start = style.start;
 
-        FeatureRunnerPlugin.log(IStatus.INFO, "Attempting to render style range at offset" + start);
-
         final List<RenderedText> renderedTexts = renderedTextSupplier.get();
 
         for (final RenderedText renderedText : renderedTexts) {
-            final int offset = renderedText.getOffset();
+            final int offset = offsetOf(renderedText);
             if (start == offset && renderedText.isRendered()) {
                 final Image image = iconProvider.imageFor(renderedText.getIcon());
                 final int x = event.x;
                 final int y = event.y + event.ascent - style.metrics.ascent;
-                FeatureRunnerPlugin.log(
-                        IStatus.INFO,
-                        "Drawing image for icon " + renderedText + " - "
-                                + component.getLine(component.getLineAtOffset(offset)));
-                gc.drawImage(image, x, y);
+                // FeatureRunnerPlugin.log(
+                // IStatus.INFO,
+                // "Drawing image for icon " + renderedText + " - "
+                // + component.getLine(component.getLineAtOffset(offset)));
+                // gc.drawImage(image, x, y);
                 break;
             }
         }
+    }
+
+
+    private int offsetOf(final RenderedText renderedText) {
+        // Not particularly nice here - StyleRanges are not aware of code
+        // folding, so projected offsets don't work.
+        // If the RenderedText here is a ProjectedRenderedText, we need the
+        // master offset
+        if (renderedText instanceof ProjectedRenderedText) {
+            return ((ProjectedRenderedText) renderedText).getMasterOffset();
+        }
+        return renderedText.getOffset();
     }
 
 

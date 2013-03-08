@@ -93,7 +93,7 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
         return new Transformer<TextModelFragment, DocumentHighlight>() {
             @Override
             public DocumentHighlight from(final TextModelFragment textFragment) {
-                return new DocumentHighlight(textFragment.lineNumber(), textFragment.length(), new RGB(r, g, b));
+                return new DocumentHighlight(textFragment.offset(), textFragment.length(), new RGB(r, g, b));
             }
         };
     }
@@ -104,7 +104,7 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
         return new Transformer<TextModelFragment, DocumentHighlight>() {
             @Override
             public DocumentHighlight from(final TextModelFragment textFragment) {
-                return new DocumentHighlight(textFragment.lineNumber(), textFragment.length(), true, new RGB(r, g, b));
+                return new DocumentHighlight(textFragment.offset(), textFragment.length(), true, new RGB(r, g, b));
             }
         };
     }

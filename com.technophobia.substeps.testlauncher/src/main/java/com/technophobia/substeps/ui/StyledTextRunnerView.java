@@ -35,10 +35,10 @@ import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
 
 public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
 
-    private static final RGB WHITE = new RGB(255, 255, 255);
-    private static final RGB GREY = new RGB(128, 128, 128);
-    private static final int IMAGE_HEIGHT = 10;
-    private static final int IMAGE_WIDTH = 10;
+    protected static final RGB WHITE = new RGB(255, 255, 255);
+    protected static final RGB GREY = new RGB(128, 128, 128);
+    protected static final int IMAGE_HEIGHT = 10;
+    protected static final int IMAGE_WIDTH = 10;
 
     private final Transformer<Integer, Point> offsetToPointTransformer;
 
@@ -139,6 +139,11 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
     }
 
 
+    protected Transformer<Integer, Point> offsetToPointTransformer() {
+        return offsetToPointTransformer;
+    }
+
+
     private void prepareTextStyleRanges(final int lineCount, final Map<Integer, Integer> offsetToParentOffsetMap) {
         // use positions to determine parent structure - if a positions
         // offset+length is greater than the next pos, then the former is a
@@ -166,7 +171,7 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
 
     private void createUnprocessedTextStyleRange(final int line, final int offset) {
         final int length = textComponent.getLine(line).length() - 1;
-        addHighlight(new DocumentHighlight(line, length, GREY));
+        addHighlight(new DocumentHighlight(offset, length, GREY));
     }
 
 
@@ -181,16 +186,20 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
 
 
     protected RenderedText createRenderedText(final int offset, final RenderedText parent) {
-        return new RenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent, offsetToPointTransformer);
+        return new RenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent, offsetToPointTransformer());
     }
 
 
     protected void addHighlight(final DocumentHighlight highlight) {
+        textComponent.setStyleRange(styleRangeFromHighlight(highlight));
+    }
+
+
+    protected StyleRange styleRangeFromHighlight(final DocumentHighlight highlight) {
         // StyleRange offset is line number offset + 1 - this is because the
         // result icon is at position 0
-        textComponent.setStyleRange(new StyleRange(textComponent.getOffsetAtLine(highlight.getLine()) + 1, highlight
-                .getLength(), colourManager.getColor(highlight.getColour()), colourManager.getColor(WHITE), highlight
-                .isBold() ? SWT.BOLD : SWT.NONE));
+        return new StyleRange(highlight.getOffset() + 1, highlight.getLength(), colourManager.getColor(highlight
+                .getColour()), colourManager.getColor(WHITE), highlight.isBold() ? SWT.BOLD : SWT.NONE);
     }
 
 
@@ -240,7 +249,7 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
                     public void run() {
                         addHighlight(highlight);
 
-                        updateIconAt(highlight.getLine(), highlightEvent);
+                        updateIconAt(textComponent.getLineAtOffset(highlight.getOffset()), highlightEvent);
                     }
                 });
             }

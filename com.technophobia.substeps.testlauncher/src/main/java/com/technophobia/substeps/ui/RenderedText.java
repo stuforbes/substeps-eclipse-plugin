@@ -9,7 +9,8 @@ public class RenderedText {
 
     private boolean expanded;
     private SubstepsIcon icon;
-    private int offset;
+
+    private final int offset;
     private final Transformer<Integer, Point> offsetToPointTransformer;
     private final RenderedText parent;
 
@@ -61,11 +62,6 @@ public class RenderedText {
 
     public Point getLocation() {
         return offsetToPointTransformer.from(Integer.valueOf(offset));
-    }
-
-
-    public void transposeBy(final int amount) {
-        this.offset += amount;
     }
 
 

@@ -4,28 +4,28 @@ import org.eclipse.swt.graphics.RGB;
 
 public class DocumentHighlight {
 
-    private final int line;
+    private final int offset;
     private final int length;
     private final RGB colour;
 
     private final boolean bold;
 
 
-    public DocumentHighlight(final int line, final int length, final RGB colour) {
-        this(line, length, false, colour);
+    public DocumentHighlight(final int offset, final int length, final RGB colour) {
+        this(offset, length, false, colour);
     }
 
 
-    public DocumentHighlight(final int line, final int length, final boolean bold, final RGB colour) {
-        this.line = line;
+    public DocumentHighlight(final int offset, final int length, final boolean bold, final RGB colour) {
+        this.offset = offset;
         this.length = length;
         this.bold = bold;
         this.colour = colour;
     }
 
 
-    public int getLine() {
-        return line;
+    public int getOffset() {
+        return offset;
     }
 
 
@@ -51,7 +51,7 @@ public class DocumentHighlight {
         result = prime * result + (bold ? 1231 : 1237);
         result = prime * result + ((colour == null) ? 0 : colour.hashCode());
         result = prime * result + length;
-        result = prime * result + line;
+        result = prime * result + offset;
         return result;
     }
 
@@ -74,7 +74,7 @@ public class DocumentHighlight {
             return false;
         if (length != other.length)
             return false;
-        if (line != other.line)
+        if (offset != other.offset)
             return false;
         return true;
     }
@@ -82,6 +82,6 @@ public class DocumentHighlight {
 
     @Override
     public String toString() {
-        return "Text at line " + line + ", length " + length + ", bold=" + bold + ", colour " + colour;
+        return "Text at offset " + offset + ", length " + length + ", bold=" + bold + ", colour " + colour;
     }
 }
