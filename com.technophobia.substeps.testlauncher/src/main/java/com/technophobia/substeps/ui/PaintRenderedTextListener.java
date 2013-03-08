@@ -105,7 +105,7 @@ public class PaintRenderedTextListener implements PaintListener, PaintObjectList
                 // IStatus.INFO,
                 // "Drawing image for icon " + renderedText + " - "
                 // + component.getLine(component.getLineAtOffset(offset)));
-                // gc.drawImage(image, x, y);
+                gc.drawImage(image, x, y);
                 break;
             }
         }

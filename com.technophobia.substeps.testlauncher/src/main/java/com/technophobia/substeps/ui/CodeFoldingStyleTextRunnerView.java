@@ -122,8 +122,10 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         final int hiddenStartOffset = offsetOfMasterLineNumber(hiddenStartLine);
         final int end = start + length;
 
-        final StyleRange[] styleRanges = viewer.getTextWidget().getStyleRanges(start,
-                viewer.getTextWidget().getCharCount() - start);
+        final int projectedStart = masterOffsetToProjectedOffset(start);
+
+        final StyleRange[] styleRanges = viewer.getTextWidget().getStyleRanges(projectedStart,
+                viewer.getTextWidget().getCharCount() - projectedStart);
 
         for (final StyleRange styleRange : styleRanges) {
             if (styleRange.start >= hiddenStartOffset && styleRange.metrics == null) {
@@ -132,7 +134,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         }
 
         for (final Integer offset : highlights.keySet()) {
-            if (offset.intValue() >= end) {
+            if (offset.intValue() >= end && masterOffsetToProjectedOffset(offset.intValue()) > -1) {
                 final DocumentHighlight documentHighlight = highlights.get(offset);
                 super.addHighlight(documentHighlight);
             }
@@ -181,38 +183,47 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     }
 
 
-    protected void hideIconsInRange(final int offset, final int length) {
-        // final int end = offset + length;
-        //
-        // final int thisLine = lineNumberOfMasterOffset(offset);
-        // final int nextLineOffset = offsetOfMasterLineNumber(thisLine + 1);
-        // final int lengthFromNextLineOffset = end - nextLineOffset;
-        //
-        // if (nextLineOffset < end) {
-        // // for (final Integer iconStyleRangeOffset : new
-        // // ArrayList<Integer>(iconStyleRanges.keySet())) {
-        // // if (iconStyleRangeOffset.intValue() >= nextLineOffset) {
-        // // final StyleRange styleRange =
-        // // iconStyleRanges.get(iconStyleRangeOffset);
-        // // viewer.getTextWidget().replaceStyleRanges(styleRange.start,
-        // // styleRange.length, new StyleRange[0]);
-        // //
-        // // if (iconStyleRangeOffset.intValue() >= end) {
-        // // final StyleRange newStyleRange =
-        // // createIconStyleRange(styleRange.start
-        // // - lengthFromNextLineOffset);
-        // // viewer.getTextWidget().setStyleRange(newStyleRange);
-        // // }
-        // // }
-        // // }
-        // }
+    protected void hideIconsInRange(final int start, final int length) {
+        final int hiddenLine = lineNumberOfMasterOffset(start);
+        final int hiddenStartLine = hiddenLine + 1;
+        final int hiddenStartOffset = offsetOfMasterLineNumber(hiddenStartLine);
+        final int end = start + length;
+
+        final int projectedStart = masterOffsetToProjectedOffset(start);
+
+        final StyleRange[] styleRanges = viewer.getTextWidget().getStyleRanges(start,
+                viewer.getTextWidget().getCharCount() - start);
+
+        for (final StyleRange styleRange : styleRanges) {
+            if (styleRange.start >= hiddenStartOffset && styleRange.metrics != null) {
+                viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
+            }
+        }
+
+        for (final Integer offset : iconStyleRanges.keySet()) {
+            if (offset.intValue() >= end && masterOffsetToProjectedOffset(offset.intValue()) > -1) {
+                final StyleRange styleRange = iconStyleRanges.get(offset);
+                final StyleRange newStyleRange = super
+                        .createIconStyleRange(masterOffsetToProjectedOffset(styleRange.start));
+                viewer.getTextWidget().setStyleRange(newStyleRange);
+            }
+        }
     }
 
 
-    protected void rerunIconStyleRangesInRange(final int offset, final int length) {
-        for (final Integer iconStyleRangeOffset : iconStyleRanges.keySet()) {
-            if (iconStyleRangeOffset.intValue() >= offset) {
-                viewer.getTextWidget().setStyleRange(iconStyleRanges.get(iconStyleRangeOffset));
+    protected void rerunIconStyleRangesInRange(final int start, final int length) {
+        for (final Integer offset : iconStyleRanges.keySet()) {
+            if (offset.intValue() > start && offset.intValue() <= start + length) {
+
+                final StyleRange styleRange = iconStyleRanges.get(offset);
+
+                // if the style range is still hidden, its projected offset will
+                // be -1
+                final int projectedOffset = masterOffsetToProjectedOffset(styleRange.start);
+                if (projectedOffset >= 0) {
+                    final StyleRange newStyleRange = super.createIconStyleRange(projectedOffset);
+                    viewer.getTextWidget().setStyleRange(newStyleRange);
+                }
             }
         }
     }
@@ -384,14 +395,14 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         @Override
         public void textHidden(final int offset, final int length) {
             hideHighlightsInRange(offset, length);
-            // hideIconsInRange(offset, length);
+            hideIconsInRange(offset, length);
         }
 
 
         @Override
         public void textVisible(final int offset, final int length) {
             rerunHighlightsInRange(offset, offset + length);
-            // rerunIconStyleRangesInRange(offset, length);
+            rerunIconStyleRangesInRange(offset, length);
         }
 
     }

@@ -161,6 +161,7 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
             icons.add(renderedText);
             lineNumberToTextMapping.put(Integer.valueOf(offset), renderedText);
 
+            textComponent.replaceTextRange(offset, 1, "\uFFFC");
             final StyleRange styleRange = createIconStyleRange(offset);
             textComponent.setStyleRange(styleRange);
 
@@ -177,7 +178,6 @@ public class StyledTextRunnerView implements RunnerView, ScrollableComponent {
 
     protected StyleRange createIconStyleRange(final int offset) {
         final StyleRange style = new StyleRange();
-        textComponent.replaceTextRange(offset, 1, "\uFFFC");
         style.start = offset;
         style.length = 1;
         style.metrics = new GlyphMetrics(IMAGE_HEIGHT, 0, IMAGE_WIDTH);
