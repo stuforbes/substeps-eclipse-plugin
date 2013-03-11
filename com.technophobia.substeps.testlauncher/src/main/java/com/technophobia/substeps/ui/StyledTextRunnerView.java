@@ -42,7 +42,7 @@ public class StyledTextRunnerView implements RunnerView {
     private StyledText textComponent;
     private PaintObjectListener paintIconsListener;
 
-    private List<RenderedText> icons;
+    private List<HierarchicalIconContainer> icons;
 
     private final StyledDocumentUpdater styledDocumentUpdater;
     private final SubstepsIconProvider iconProvider;
@@ -54,7 +54,7 @@ public class StyledTextRunnerView implements RunnerView {
         this.documentHighlightToStyleRangeTransformer = new InstanceAwareDocumentHighlightToStyleRangeTransformer(
                 colourManager);
 
-        this.icons = new ArrayList<RenderedText>();
+        this.icons = new ArrayList<HierarchicalIconContainer>();
 
         this.styledDocumentUpdater = updateTextComponentCallback();
     }
@@ -64,7 +64,7 @@ public class StyledTextRunnerView implements RunnerView {
     public void createPartControl(final Composite parent) {
 
         textComponent = createTextComponent(parent);
-        this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyRenderedTexts());
+        this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyIcons());
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -114,7 +114,7 @@ public class StyledTextRunnerView implements RunnerView {
     protected void updateStyleRangesTo(final StyledDocument styledDocument) {
         textComponent.setStyleRange(null);
         final int lineCount = textComponent.getLineCount();
-        icons = new ArrayList<RenderedText>(lineCount);
+        icons = new ArrayList<HierarchicalIconContainer>(lineCount);
         prepareTextStyleRanges(textComponent.getLineCount(), styledDocument.getOffsetToParentOffsetMapping());
     }
 
@@ -129,38 +129,48 @@ public class StyledTextRunnerView implements RunnerView {
         // offset+length is greater than the next pos, then the former is a
         // parent
 
-        final Map<Integer, RenderedText> lineNumberToTextMapping = new HashMap<Integer, RenderedText>();
+        final Map<Integer, HierarchicalIconContainer> lineNumberToIconMapping = new HashMap<Integer, HierarchicalIconContainer>();
 
         for (int i = 1; i < lineCount; i++) {
             final int offset = textComponent.getOffsetAtLine(i);
 
             final Integer parentOffset = offsetToParentOffsetMap.get(Integer.valueOf(offset));
-
-            final RenderedText renderedText = createRenderedText(offset,
-                    parentOffset != null ? lineNumberToTextMapping.get(parentOffset) : null);
-            icons.add(renderedText);
-            lineNumberToTextMapping.put(Integer.valueOf(offset), renderedText);
+            final HierarchicalIconContainer parentContainer = parentOffset != null ? lineNumberToIconMapping
+                    .get(parentOffset) : null;
 
             textComponent.replaceTextRange(offset, 1, "\uFFFC");
 
-            createUnprocessedHighlights(i, offset);
+            createUnprocessedTextHighlight(i, offset);
+            createUnprocessedIconHighlight(i, offset, parentContainer, lineNumberToIconMapping);
         }
     }
 
 
-    private void createUnprocessedHighlights(final int line, final int offset) {
+    private void createUnprocessedTextHighlight(final int line, final int offset) {
         final int length = textComponent.getLine(line).length() - 1;
         // Note the +1 for the offset. The offset is for the line, and position
         // 0 of the line is reserved for the image StyleRange. By not using +1
         // here, you will
         // overwrite the lines image
         addHighlight(new TextHighlight(offset + 1, length, GREY));
-        addHighlight(new IconHighlight(offset, 1, IMAGE_WIDTH, IMAGE_HEIGHT));
     }
 
 
-    protected RenderedText createRenderedText(final int offset, final RenderedText parent) {
-        return new RenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent);
+    private void createUnprocessedIconHighlight(final int line, final int offset,
+            final HierarchicalIconContainer parentContainer,
+            final Map<Integer, HierarchicalIconContainer> lineNumberToTextMapping) {
+        final IconHighlight icon = new IconHighlight(offset, 1, SubstepsIcon.SubstepNoResult, IMAGE_WIDTH, IMAGE_HEIGHT);
+        addHighlight(icon);
+
+        final HierarchicalIconContainer iconContainer = createIconContainer(parentContainer, icon);
+        icons.add(iconContainer);
+        lineNumberToTextMapping.put(Integer.valueOf(offset), iconContainer);
+    }
+
+
+    protected HierarchicalIconContainer createIconContainer(final HierarchicalIconContainer parentContainer,
+            final IconHighlight icon) {
+        return new HierarchicalIconContainer(true, icon, parentContainer);
     }
 
 
@@ -194,17 +204,19 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
-    protected void doIconOperation(final int offset, final int length, final Callback1<RenderedText> callback) {
+    protected void doIconOperation(final int offset, final int length,
+            final Callback1<HierarchicalIconContainer> callback) {
         final int end = offset + length;
-        for (final RenderedText icon : icons) {
-            if (icon.getOffset() >= offset && icon.getOffset() < end) {
-                callback.callback(icon);
+        for (final HierarchicalIconContainer iconContainer : icons) {
+            final int iconOffset = iconContainer.getOffset();
+            if (iconOffset >= offset && iconOffset < end) {
+                callback.callback(iconContainer);
             }
         }
     }
 
 
-    protected void doIconOperation(final int offset, final Callback1<RenderedText> callback) {
+    protected void doIconOperation(final int offset, final Callback1<HierarchicalIconContainer> callback) {
         doIconOperation(offset, Integer.MAX_VALUE - offset, callback);
     }
 
@@ -240,11 +252,11 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
-    private Supplier<List<RenderedText>> supplyRenderedTexts() {
-        return new Supplier<List<RenderedText>>() {
+    private Supplier<List<HierarchicalIconContainer>> supplyIcons() {
+        return new Supplier<List<HierarchicalIconContainer>>() {
 
             @Override
-            public List<RenderedText> get() {
+            public List<HierarchicalIconContainer> get() {
                 return icons;
             }
         };

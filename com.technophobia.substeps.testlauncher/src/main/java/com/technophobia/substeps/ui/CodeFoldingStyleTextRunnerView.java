@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
@@ -27,12 +25,12 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
-import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.supplier.Transformer;
-import com.technophobia.substeps.ui.component.SubstepsIcon;
+import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
+import com.technophobia.substeps.ui.model.IconHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
 
 public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
@@ -41,14 +39,13 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     private ProjectionAnnotationModel annotationModel;
     private ProjectedTextPositionCalculator textPositionCalculator;
 
-    private Annotation[] oldAnnotations;
+    private final Map<Integer, Annotation> oldAnnotationsByMasterOffset;
 
     // Map of all highlights, keyed on offset. The reason it's keyed on
     // offset is so that new updates for a line
     // overwrite previous ones. For example, a test passed highlight should
     // replace a now processing highlight
     private final Map<Integer, DocumentHighlight> highlights;
-
     private final Transformer<Integer, Integer> masterToProjectedOffsetTransformer;
 
 
@@ -56,6 +53,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         super(colourManager, iconProvider);
         this.highlights = new HashMap<Integer, DocumentHighlight>();
         this.masterToProjectedOffsetTransformer = initMasterToProjectedOffsetTransformer();
+        this.oldAnnotationsByMasterOffset = new HashMap<Integer, Annotation>();
     }
 
 
@@ -69,6 +67,17 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
 
     @Override
+    public void dispose() {
+        this.highlights.clear();
+        this.oldAnnotationsByMasterOffset.clear();
+
+        this.viewer = null;
+        this.annotationModel = null;
+        super.dispose();
+    }
+
+
+    @Override
     protected void resetTextTo(final StyledDocument styledDocument) {
         // order is important here: 1) Set the text, 2) update folding, 3)
         // update style ranges
@@ -78,13 +87,6 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         updateFoldingStructure(styledDocument.getPositions());
         this.highlights.clear();
         updateStyleRangesTo(styledDocument);
-    }
-
-
-    @Override
-    protected RenderedText createRenderedText(final int offset, final RenderedText parent) {
-        return new ProjectedRenderedText(true, SubstepsIcon.SubstepNoResult, offset, parent,
-                masterToProjectedOffsetTransformer);
     }
 
 
@@ -110,9 +112,9 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     protected void hideHighlightsInRange(final int start, final int length) {
 
-        final int hiddenLine = lineNumberOfMasterOffset(start);
+        final int hiddenLine = textPositionCalculator.lineNumberOfMasterOffset(start);
         final int hiddenStartLine = hiddenLine + 1;
-        final int hiddenStartOffset = offsetOfMasterLineNumber(hiddenStartLine);
+        final int hiddenStartOffset = textPositionCalculator.offsetOfMasterLineNumber(hiddenStartLine);
         final int end = start + length;
 
         final int projectedStart = textPositionCalculator.masterOffsetToProjectedOffset(start);
@@ -157,6 +159,28 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     }
 
 
+    @Override
+    protected void updateIconAt(final int line, final HighlightEvent highlightEvent) {
+        super.updateIconAt(line, highlightEvent);
+
+        if (HighlightEvent.TestPassed.equals(highlightEvent) && line > 0) {
+            final int offset = textPositionCalculator.offsetOfMasterLineNumber(line);
+            final Annotation annotation = findAnnotationAt(offset);
+
+            if (annotation != null) {
+                annotationModel.collapse(annotation);
+            }
+        }
+    }
+
+
+    private Annotation findAnnotationAt(final int offset) {
+        final Integer offsetInteger = Integer.valueOf(offset);
+        return oldAnnotationsByMasterOffset.containsKey(offsetInteger) ? oldAnnotationsByMasterOffset
+                .get(offsetInteger) : null;
+    }
+
+
     protected void updateFoldingStructure(final List<Position> positions) {
         final Annotation[] annotations = new Annotation[positions.size()];
 
@@ -172,39 +196,23 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
             annotations[i] = annotation;
         }
 
-        if (oldAnnotations != null) {
-            for (final Annotation oldAnnotation : oldAnnotations) {
-                annotationModel.removeAnnotation(oldAnnotation);
-            }
+        for (final Annotation oldAnnotation : oldAnnotationsByMasterOffset.values()) {
+            annotationModel.removeAnnotation(oldAnnotation);
         }
+        oldAnnotationsByMasterOffset.clear();
 
         for (final Annotation newAnnotation : newAnnotations.keySet()) {
-            annotationModel.addAnnotation(newAnnotation, newAnnotations.get(newAnnotation));
-        }
-
-        oldAnnotations = annotations;
-    }
-
-
-    protected int lineNumberOfMasterOffset(final int offset) {
-        try {
-            return viewer.getDocument().getLineOfOffset(offset);
-        } catch (final BadLocationException ex) {
-            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not get line number for offset " + offset
-                    + ", returning -1");
-            return -1;
+            final Position position = newAnnotations.get(newAnnotation);
+            annotationModel.addAnnotation(newAnnotation, position);
+            oldAnnotationsByMasterOffset.put(Integer.valueOf(position.getOffset()), newAnnotation);
         }
     }
 
 
-    protected int offsetOfMasterLineNumber(final int lineNumber) {
-        try {
-            return viewer.getDocument().getLineOffset(lineNumber);
-        } catch (final BadLocationException e) {
-            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not get offset for line number" + lineNumber
-                    + ", returning -1");
-            return -1;
-        }
+    @Override
+    protected HierarchicalIconContainer createIconContainer(final HierarchicalIconContainer parentContainer,
+            final IconHighlight icon) {
+        return new ProjectedHierarchicalIconContainer(true, icon, parentContainer, masterToProjectedOffsetTransformer);
     }
 
 

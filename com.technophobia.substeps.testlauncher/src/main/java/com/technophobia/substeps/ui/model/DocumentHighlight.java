@@ -1,6 +1,5 @@
 package com.technophobia.substeps.ui.model;
 
-
 public abstract class DocumentHighlight {
 
     private final int offset;
@@ -52,6 +51,6 @@ public abstract class DocumentHighlight {
 
     @Override
     public String toString() {
-        return "Text at offset " + offset + ", length " + length;
+        return "Highlight at offset " + offset + ", length " + length;
     }
 }

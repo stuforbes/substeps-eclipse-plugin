@@ -1,15 +1,30 @@
 package com.technophobia.substeps.ui.model;
 
+import com.technophobia.substeps.ui.component.SubstepsIcon;
+
 public class IconHighlight extends DocumentHighlight {
 
     private final int imageWidth;
     private final int imageHeight;
+    private SubstepsIcon icon;
 
 
-    public IconHighlight(final int offset, final int length, final int imageWidth, final int imageHeight) {
+    public IconHighlight(final int offset, final int length, final SubstepsIcon icon, final int imageWidth,
+            final int imageHeight) {
         super(offset, length);
+        this.icon = icon;
         this.imageWidth = imageWidth;
         this.imageHeight = imageHeight;
+    }
+
+
+    public SubstepsIcon getIcon() {
+        return icon;
+    }
+
+
+    public void mutateIconTo(final SubstepsIcon icon) {
+        this.icon = icon;
     }
 
 
@@ -52,6 +67,7 @@ public class IconHighlight extends DocumentHighlight {
 
     @Override
     public String toString() {
-        return super.toString() + ", image width = " + imageWidth + ", image height = " + imageHeight;
+        return super.toString() + "icon = " + icon + ", image width = " + imageWidth + ", image height = "
+                + imageHeight;
     }
 }

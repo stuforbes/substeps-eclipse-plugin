@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.substeps.supplier.Transformer;
+import com.technophobia.substeps.ui.component.SubstepsIcon;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.IconHighlight;
 import com.technophobia.substeps.ui.model.TextHighlight;
@@ -52,7 +53,7 @@ public class InstanceAwareDocumentHighlightToStyleRangeTransformerTest {
     public void callingTransformerWithSpecificInstanceInvokesCorrectDelegate() {
 
         final TextHighlight textHighlight = new TextHighlight(32, 2, true, new RGB(255, 0, 0));
-        final IconHighlight iconHighlight = new IconHighlight(65, 65, 43, 12);
+        final IconHighlight iconHighlight = new IconHighlight(65, 65, SubstepsIcon.SubstepPassed, 43, 12);
 
         final StyleRange textStyleRange = new StyleRange(32, 2, null, null);
         final StyleRange iconStyleRange = new StyleRange(65, 65, null, null);
