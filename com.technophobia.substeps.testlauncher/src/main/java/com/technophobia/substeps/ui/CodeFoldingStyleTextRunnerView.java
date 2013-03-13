@@ -11,6 +11,7 @@ import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.IAnnotationAccess;
+import org.eclipse.jface.text.source.IAnnotationModelListener;
 import org.eclipse.jface.text.source.IOverviewRuler;
 import org.eclipse.jface.text.source.ISharedTextColors;
 import org.eclipse.jface.text.source.IVerticalRuler;
@@ -49,6 +50,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     // replace a now processing highlight
     private final Map<Integer, DocumentHighlight> highlights;
     private final Transformer<Integer, Integer> masterToProjectedOffsetTransformer;
+    private IAnnotationModelListener annotationModelListener;
 
 
     public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
@@ -175,15 +177,14 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     }
 
 
-    /**
-     * We are provided with the master offset - however the base class does not
-     * have a concept of master vs projected and requires the project offset to
-     * be passed in. This means that we call the super after converting the
-     * master offset to a projected offset.
-     */
     @Override
     protected void updateIconAt(final int offset, final HighlightEvent highlightEvent) {
-        super.updateIconAt(textPositionCalculator.masterOffsetToProjectedOffset(offset), highlightEvent);
+        final int lineNumber = textPositionCalculator.lineNumberOfMasterOffset(offset);
+        // we don't update line 0 - the feature line. As such, the offset/image
+        // list starts at line 1, so subtract 1 from this accordingly
+        if (lineNumber > 0) {
+            updateIconAtLine(lineNumber - 1, highlightEvent);
+        }
 
         // we know the offset is for the text, and the 1st part of any line is
         // the icon character. Therefore, subtract 1 from the offset to
@@ -270,20 +271,23 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
         annotationModel = viewer.getProjectionAnnotationModel();
 
-        final TextRegionVisibilityToggle toggle = new CompositeVisiblityToggle(
+        final TextRegionVisibilityToggle visibilityToggle = new CompositeVisiblityToggle(
                 new UpdateRenderedTextVisibilityToggle(), //
                 new UpdateStyleRangesVisibilityToggle() //
         );
+        annotationModelListener = new ToggleTextVisibilityOnCodeFoldingListener(visibilityToggle);
 
-        annotationModel.addAnnotationModelListener(new ToggleTextVisibilityOnCodeFoldingListener(toggle));
+        annotationModel.addAnnotationModelListener(annotationModelListener);
     }
 
 
     private void resetFoldedDocument() {
+        annotationModel.removeAnnotationModelListener(annotationModelListener);
         final Document document = new Document();
         viewer.setDocument(document, new AnnotationModel());
 
         annotationModel = viewer.getProjectionAnnotationModel();
+        annotationModel.addAnnotationModelListener(annotationModelListener);
         FeatureRunnerPlugin.log(IStatus.INFO, "New Annotation model has "
                 + (annotationModel.getAnnotationIterator().hasNext() ? " Some" : " No ") + " Annotations");
     }

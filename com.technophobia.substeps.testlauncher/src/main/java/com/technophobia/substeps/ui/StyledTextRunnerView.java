@@ -209,17 +209,20 @@ public class StyledTextRunnerView implements RunnerView {
         // we don't update line 0 - the feature line. As such, the offset/image
         // list starts at line 1, so subtract 1 from this accordingly
         if (line > 0) {
-            final int normalizedLine = line - 1;
+            updateIconAtLine(line - 1, highlightEvent);
+        }
+    }
 
-            if (HighlightEvent.TestPassed.equals(highlightEvent)) {
-                icons.get(normalizedLine).mutateIconTo(SubstepsIcon.SubstepPassed);
-            } else if (HighlightEvent.TestFailed.equals(highlightEvent)) {
-                icons.get(normalizedLine).mutateIconTo(SubstepsIcon.SubstepFailed);
-            } else if (HighlightEvent.NoChange.equals(highlightEvent)) {
-                // No-op
-            } else {
-                FeatureRunnerPlugin.log(IStatus.WARNING, "Unexpected highlight event type");
-            }
+
+    protected void updateIconAtLine(final int line, final HighlightEvent highlightEvent) {
+        if (HighlightEvent.TestPassed.equals(highlightEvent)) {
+            icons.get(line).mutateIconTo(SubstepsIcon.SubstepPassed);
+        } else if (HighlightEvent.TestFailed.equals(highlightEvent)) {
+            icons.get(line).mutateIconTo(SubstepsIcon.SubstepFailed);
+        } else if (HighlightEvent.NoChange.equals(highlightEvent)) {
+            // No-op
+        } else {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Unexpected highlight event type");
         }
     }
 
