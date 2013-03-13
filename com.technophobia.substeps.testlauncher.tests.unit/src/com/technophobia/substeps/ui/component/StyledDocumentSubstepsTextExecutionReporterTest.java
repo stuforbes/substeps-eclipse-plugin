@@ -71,12 +71,9 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         final HierarchicalTextStructure textStructure = TextModelFragment.createRootFragment("0", text, 0, 20, null);
         final List<HierarchicalTextStructure> textStructures = Arrays.asList(textStructure);
 
-        final Position position = new Position(0, 19);
-        final List<Position> positions = Collections.singletonList(position);
-
         context.checking(new Expectations() {
             {
-                oneOf(textHighlighter).documentChanged(text, textStructures, positions);
+                oneOf(textHighlighter).documentChanged(text, textStructures, Collections.<Position> emptyList());
 
                 oneOf(textFactory).createTextStructureFor(0, 0, "1", null, text);
                 will(returnValue(textStructure));
@@ -85,9 +82,6 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
                 oneOf(textCollection).items();
                 will(returnValue(textStructures));
-
-                oneOf(textCollection).positionFor(textStructure);
-                will(returnValue(position));
             }
         });
 
@@ -105,7 +99,7 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         final String given = "Given something";
         final String then = "Then something else";
 
-        final String text = feature + "\n\t" + scenario + "\n\t\t" + given + "\n\t\t" + then;
+        final String text = feature + "\n \t" + scenario + "\n \t\t" + given + "\n \t\t" + then;
 
         final TextModelFragment featureStructure = TextModelFragment.createRootFragment("0", feature, 0, 0, null);
         final TextModelFragment scenarioStructure = featureStructure.createChild("1", scenario, 27, 1);
@@ -117,10 +111,10 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
         final Position featurePosition = new Position(0, 88);
         final Position scenarioPosition = new Position(27, 61);
-        final Position givenPosition = new Position(49, 17);
-        final Position thenPosition = new Position(67, 21);
+        // final Position givenPosition = new Position(49, 17);
+        // final Position thenPosition = new Position(67, 21);
 
-        final List<Position> positions = Arrays.asList(featurePosition, scenarioPosition, givenPosition, thenPosition);
+        final List<Position> positions = Arrays.asList(featurePosition, scenarioPosition);
 
         context.checking(new Expectations() {
             {
@@ -130,10 +124,10 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
                 oneOf(textFactory).createTextStructureFor(27, 1, "1", "0", scenario);
                 will(returnValue(scenarioStructure));
 
-                oneOf(textFactory).createTextStructureFor(49, 2, "2", "1", given);
+                oneOf(textFactory).createTextStructureFor(50, 2, "2", "1", given);
                 will(returnValue(givenStructure));
 
-                oneOf(textFactory).createTextStructureFor(67, 3, "3", "2", then);
+                oneOf(textFactory).createTextStructureFor(69, 3, "3", "2", then);
                 will(returnValue(thenStructure));
 
                 oneOf(textCollection).add(featureStructure);
@@ -148,10 +142,10 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
                 will(returnValue(featurePosition));
                 oneOf(textCollection).positionFor(scenarioStructure);
                 will(returnValue(scenarioPosition));
-                oneOf(textCollection).positionFor(givenStructure);
-                will(returnValue(givenPosition));
-                oneOf(textCollection).positionFor(thenStructure);
-                will(returnValue(thenPosition));
+                // oneOf(textCollection).positionFor(givenStructure);
+                // will(returnValue(givenPosition));
+                // oneOf(textCollection).positionFor(thenStructure);
+                // will(returnValue(thenPosition));
 
                 oneOf(textHighlighter).documentChanged(text, (Iterable<HierarchicalTextStructure>) textStructures,
                         positions);
@@ -176,7 +170,7 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         final String givenSubstep = "Given some substep";
         final String then = "Then something else";
 
-        final String text = feature + "\n\t" + scenario + "\n\t\t" + given + "\n\t\t\t" + givenSubstep + "\n\t\t"
+        final String text = feature + "\n \t" + scenario + "\n \t\t" + given + "\n \t\t\t" + givenSubstep + "\n \t\t"
                 + then;
 
         final TextModelFragment featureStructure = TextModelFragment.createRootFragment("0", feature, 0, 0, null);
@@ -191,11 +185,10 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         final Position featurePosition = new Position(0, 88);
         final Position scenarioPosition = new Position(27, 61);
         final Position givenPosition = new Position(49, 38);
-        final Position givenSubstepPosition = new Position(66, 17);
-        final Position thenPosition = new Position(89, 21);
+        // final Position givenSubstepPosition = new Position(66, 17);
+        // final Position thenPosition = new Position(89, 21);
 
-        final List<Position> positions = Arrays.asList(featurePosition, scenarioPosition, givenPosition,
-                givenSubstepPosition, thenPosition);
+        final List<Position> positions = Arrays.asList(featurePosition, scenarioPosition, givenPosition);
 
         context.checking(new Expectations() {
             {
@@ -205,13 +198,13 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
                 oneOf(textFactory).createTextStructureFor(27, 1, "1", "0", scenario);
                 will(returnValue(scenarioStructure));
 
-                oneOf(textFactory).createTextStructureFor(49, 2, "2", "1", given);
+                oneOf(textFactory).createTextStructureFor(50, 2, "2", "1", given);
                 will(returnValue(givenStructure));
 
-                oneOf(textFactory).createTextStructureFor(67, 3, "3", "2", givenSubstep);
+                oneOf(textFactory).createTextStructureFor(69, 3, "3", "2", givenSubstep);
                 will(returnValue(givenSubstepStructure));
 
-                oneOf(textFactory).createTextStructureFor(89, 4, "4", "1", then);
+                oneOf(textFactory).createTextStructureFor(92, 4, "4", "1", then);
                 will(returnValue(thenStructure));
 
                 oneOf(textCollection).add(featureStructure);
@@ -230,10 +223,6 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
                 will(returnValue(scenarioPosition));
                 oneOf(textCollection).positionFor(givenStructure);
                 will(returnValue(givenPosition));
-                oneOf(textCollection).positionFor(givenSubstepStructure);
-                will(returnValue(givenSubstepPosition));
-                oneOf(textCollection).positionFor(thenStructure);
-                will(returnValue(thenPosition));
 
                 oneOf(textHighlighter).documentChanged(text, (Iterable<HierarchicalTextStructure>) textStructures,
                         positions);
@@ -277,10 +266,10 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
                 oneOf(textFactory).createTextStructureFor(27, 1, "1", "0", scenario);
                 will(returnValue(scenarioStructure));
 
-                oneOf(textFactory).createTextStructureFor(49, 2, "2", "1", given);
+                oneOf(textFactory).createTextStructureFor(50, 2, "2", "1", given);
                 will(returnValue(givenStructure));
 
-                oneOf(textFactory).createTextStructureFor(67, 3, "3", "2", then);
+                oneOf(textFactory).createTextStructureFor(69, 3, "3", "2", then);
                 will(returnValue(thenStructure));
 
                 oneOf(textCollection).add(featureStructure);
@@ -295,6 +284,8 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
                 oneOf(textHighlighter).documentChanged(text, (Iterable<HierarchicalTextStructure>) textStructures,
                         positions);
+
+                oneOf(textHighlighter).reset();
             }
         });
 
@@ -330,10 +321,10 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
                 oneOf(textFactory).createTextStructureFor(27, 1, "1", "0", scenario);
                 will(returnValue(scenarioStructure));
 
-                oneOf(textFactory).createTextStructureFor(49, 2, "2", "1", given);
+                oneOf(textFactory).createTextStructureFor(50, 2, "2", "1", given);
                 will(returnValue(givenStructure));
 
-                oneOf(textFactory).createTextStructureFor(67, 3, "3", "2", then);
+                oneOf(textFactory).createTextStructureFor(69, 3, "3", "2", then);
                 will(returnValue(thenStructure));
 
                 oneOf(textCollection).add(featureStructure);
@@ -355,5 +346,20 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         executionReporter.addExecutionNode("2", "1", given);
         executionReporter.addExecutionNode("3", "2", then);
         executionReporter.executingNode("3");
+
+    }
+
+
+    @Test
+    public void resettingExecutionStateClearsDataModelAndResetsHighlighter() {
+        context.checking(new Expectations() {
+            {
+                oneOf(textCollection).reset();
+
+                oneOf(textHighlighter).reset();
+            }
+        });
+
+        executionReporter.resetExecutionState();
     }
 }

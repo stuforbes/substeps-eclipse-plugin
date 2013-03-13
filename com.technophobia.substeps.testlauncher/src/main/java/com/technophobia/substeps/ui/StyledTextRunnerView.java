@@ -41,19 +41,18 @@ public class StyledTextRunnerView implements RunnerView {
 
     private StyledText textComponent;
     private PaintObjectListener paintIconsListener;
+    private Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer;
 
     private List<HierarchicalIconContainer> icons;
 
     private final StyledDocumentUpdater styledDocumentUpdater;
     private final SubstepsIconProvider iconProvider;
-    private final Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer;
+    private final ColourManager colourManager;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
+        this.colourManager = colourManager;
         this.iconProvider = iconProvider;
-        this.documentHighlightToStyleRangeTransformer = new InstanceAwareDocumentHighlightToStyleRangeTransformer(
-                colourManager);
-
         this.icons = new ArrayList<HierarchicalIconContainer>();
 
         this.styledDocumentUpdater = updateTextComponentCallback();
@@ -63,8 +62,9 @@ public class StyledTextRunnerView implements RunnerView {
     @Override
     public void createPartControl(final Composite parent) {
 
-        textComponent = createTextComponent(parent);
+        this.textComponent = createTextComponent(parent);
         this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyIcons());
+        this.documentHighlightToStyleRangeTransformer = initDocumentHighlightToStyleRangeTransformer(colourManager);
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -111,8 +111,12 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
+    protected void clearText() {
+        setTextTo("");
+    }
+
+
     protected void updateStyleRangesTo(final StyledDocument styledDocument) {
-        textComponent.setStyleRange(null);
         final int lineCount = textComponent.getLineCount();
         icons = new ArrayList<HierarchicalIconContainer>(lineCount);
         prepareTextStyleRanges(textComponent.getLineCount(), styledDocument.getOffsetToParentOffsetMapping());
@@ -120,6 +124,7 @@ public class StyledTextRunnerView implements RunnerView {
 
 
     protected void setTextTo(final String text) {
+        textComponent.setStyleRange(null);
         textComponent.setText(text);
     }
 
@@ -180,11 +185,26 @@ public class StyledTextRunnerView implements RunnerView {
 
 
     protected void addHighlight(final DocumentHighlight highlight) {
-        textComponent.setStyleRange(documentHighlightToStyleRangeTransformer.from(highlight));
+        final StyleRange styleRange = documentHighlightToStyleRangeTransformer.from(highlight);
+
+        // We never want the style range to be longer than the document,
+        // otherwise an IllegalArgumentException is thrown. Instead,
+        // make sure the style range is trimmed to the length of the document if
+        // required
+        styleRange.length = Math.min(styleRange.length, textComponent.getCharCount() - styleRange.start);
+        textComponent.setStyleRange(styleRange);
     }
 
 
-    protected void updateIconAt(final int line, final HighlightEvent highlightEvent) {
+    protected Transformer<DocumentHighlight, StyleRange> initDocumentHighlightToStyleRangeTransformer(
+            final ColourManager colourManager) {
+        return new InstanceAwareDocumentHighlightToStyleRangeTransformer(colourManager);
+    }
+
+
+    protected void updateIconAt(final int offset, final HighlightEvent highlightEvent) {
+
+        final int line = textComponent.getLineAtOffset(offset);
 
         // we don't update line 0 - the feature line. As such, the offset/image
         // list starts at line 1, so subtract 1 from this accordingly
@@ -232,9 +252,21 @@ public class StyledTextRunnerView implements RunnerView {
                     public void run() {
                         addHighlight(highlight);
 
-                        updateIconAt(textComponent.getLineAtOffset(highlight.getOffset()), highlightEvent);
+                        updateIconAt(highlight.getOffset(), highlightEvent);
                     }
                 });
+            }
+
+
+            @Override
+            public void tearDown() {
+                textComponent.getDisplay().asyncExec(new Runnable() {
+                    @Override
+                    public void run() {
+                        clearText();
+                    }
+                });
+
             }
 
 
@@ -249,6 +281,7 @@ public class StyledTextRunnerView implements RunnerView {
                 });
             }
         };
+
     }
 
 

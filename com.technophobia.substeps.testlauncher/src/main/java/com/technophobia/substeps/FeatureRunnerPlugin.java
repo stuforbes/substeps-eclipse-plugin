@@ -40,10 +40,10 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.packageadmin.PackageAdmin;
 
-import com.technophobia.substeps.junit.ui.SubstepsFeatureTestRunnerViewPartOld;
 import com.technophobia.substeps.model.LaunchManagerAwareSubstepsModel;
 import com.technophobia.substeps.model.SubstepsModel;
 import com.technophobia.substeps.model.SubstepsRunListener;
+import com.technophobia.substeps.ui.SubstepsFeatureTestRunnerViewPart;
 
 public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActivator {
 
@@ -239,7 +239,7 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
     }
 
 
-    public SubstepsFeatureTestRunnerViewPartOld showTestRunnerViewPartInActivePage() {
+    public SubstepsFeatureTestRunnerViewPart showTestRunnerViewPartInActivePage() {
         try {
             // Have to force the creation of view part contents
             // otherwise the UI will not be updated
@@ -247,12 +247,12 @@ public class FeatureRunnerPlugin extends AbstractUIPlugin implements BundleActiv
             final IWorkbenchPage page = window != null ? window.getActivePage() : null;
             if (page == null)
                 return null;
-            final SubstepsFeatureTestRunnerViewPartOld view = (SubstepsFeatureTestRunnerViewPartOld) page
-                    .findView(SubstepsFeatureTestRunnerViewPartOld.NAME);
+            final SubstepsFeatureTestRunnerViewPart view = (SubstepsFeatureTestRunnerViewPart) page
+                    .findView(SubstepsFeatureTestRunnerViewPart.NAME);
             if (view == null) {
                 // create and show the result view if it isn't created yet.
-                return (SubstepsFeatureTestRunnerViewPartOld) page.showView(SubstepsFeatureTestRunnerViewPartOld.NAME,
-                        null, IWorkbenchPage.VIEW_VISIBLE);
+                return (SubstepsFeatureTestRunnerViewPart) page.showView(SubstepsFeatureTestRunnerViewPart.NAME, null,
+                        IWorkbenchPage.VIEW_VISIBLE);
             }
             return view;
         } catch (final PartInitException pie) {

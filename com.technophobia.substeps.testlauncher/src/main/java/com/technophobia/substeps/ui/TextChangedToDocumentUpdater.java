@@ -60,6 +60,13 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
     }
 
 
+    @Override
+    public void reset() {
+        updater.tearDown();
+
+    }
+
+
     private HighlightEvent highlightEventFor(final TextState textState) {
         if (TextState.InProgress.equals(textState)) {
             return HighlightEvent.NoChange;
