@@ -4,6 +4,8 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentInformationMapping;
 import org.eclipse.jface.text.projection.ProjectionDocument;
+import org.eclipse.jface.text.source.IAnnotationModel;
+import org.eclipse.jface.text.source.IAnnotationModelListener;
 import org.eclipse.jface.text.source.IOverviewRuler;
 import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.jface.text.source.projection.ProjectionViewer;
@@ -11,9 +13,46 @@ import org.eclipse.swt.widgets.Composite;
 
 public class MappingEnabledProjectionViewer extends ProjectionViewer {
 
+    private final IAnnotationModelListener invalidateTextPresentationListener;
+
+
     public MappingEnabledProjectionViewer(final Composite parent, final IVerticalRuler ruler,
             final IOverviewRuler overviewRuler, final boolean showsAnnotationOverview, final int styles) {
         super(parent, ruler, overviewRuler, showsAnnotationOverview, styles);
+
+        this.invalidateTextPresentationListener = new IAnnotationModelListener() {
+
+            @Override
+            public void modelChanged(final IAnnotationModel model) {
+                invalidateTextPresentation();
+            }
+        };
+    }
+
+
+    @Override
+    protected void disableRedrawing() {
+        // super.disableRedrawing();
+    }
+
+
+    @Override
+    protected void enabledRedrawing() {
+    }
+
+
+    @Override
+    protected void enabledRedrawing(final int topIndex) {
+    }
+
+
+    @Override
+    public void setDocument(final IDocument document, final IAnnotationModel annotationModel) {
+        annotationModel.removeAnnotationModelListener(invalidateTextPresentationListener);
+
+        super.setDocument(document, annotationModel);
+
+        annotationModel.addAnnotationModelListener(invalidateTextPresentationListener);
     }
 
 
