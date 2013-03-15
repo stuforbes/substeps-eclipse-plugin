@@ -4,12 +4,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.AnnotationModel;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.IAnnotationAccess;
+import org.eclipse.jface.text.source.IAnnotationModelListener;
 import org.eclipse.jface.text.source.IOverviewRuler;
 import org.eclipse.jface.text.source.ISharedTextColors;
 import org.eclipse.jface.text.source.IVerticalRuler;
@@ -25,6 +27,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
+import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.supplier.Transformer;
@@ -37,7 +40,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     private MappingEnabledProjectionViewer viewer;
     private ProjectionAnnotationModel annotationModel;
-    private ProjectedTextPositionCalculator textPositionCalculator;
+    private TextPositionCalculator textPositionCalculator;
 
     private final Map<Integer, Annotation> oldAnnotationsByMasterOffset;
 
@@ -47,6 +50,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     // replace a now processing highlight
     private final Map<Integer, DocumentHighlight> highlights;
     private final Transformer<Integer, Integer> masterToProjectedOffsetTransformer;
+    private IAnnotationModelListener annotationModelListener;
 
 
     public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
@@ -98,7 +102,15 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     @Override
     protected void setTextTo(final String text) {
+        viewer.getTextWidget().setStyleRange(null);
         viewer.getDocument().set(text);
+    }
+
+
+    @Override
+    protected void clearText() {
+        resetFoldedDocument();
+        super.clearText();
     }
 
 
@@ -112,30 +124,24 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     protected void hideHighlightsInRange(final int start, final int length) {
 
-        final int hiddenLine = textPositionCalculator.lineNumberOfMasterOffset(start);
+        final int hiddenLine = textPositionCalculator.masterLineToProjectedLine(textPositionCalculator
+                .lineNumberOfMasterOffset(start));
         final int hiddenStartLine = hiddenLine + 1;
-        final int hiddenStartOffset = textPositionCalculator.offsetOfMasterLineNumber(hiddenStartLine);
-        final int end = start + length;
+        final int hiddenStartOffset = textPositionCalculator.offsetOfProjectedLineNumber(hiddenStartLine);
+        final int end = textPositionCalculator.masterOffsetToProjectedOffset(start + length);
+        final int hiddenLength = end - hiddenStartOffset;
 
-        final int projectedStart = textPositionCalculator.masterOffsetToProjectedOffset(start);
+        final StyleRange[] styleRangesToBeRemoved = viewer.getTextWidget().getStyleRanges(hiddenStartOffset,
+                hiddenLength);
 
-        final StyleRange[] styleRanges = viewer.getTextWidget().getStyleRanges(projectedStart,
-                viewer.getTextWidget().getCharCount() - projectedStart);
-
-        for (final StyleRange styleRange : styleRanges) {
-            if (styleRange.start >= hiddenStartOffset) {
-                viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
-            }
+        for (final StyleRange styleRange : styleRangesToBeRemoved) {
+            viewer.getTextWidget().replaceStyleRanges(styleRange.start, styleRange.length, new StyleRange[0]);
         }
 
-        for (final Integer offset : highlights.keySet()) {
-            final int projectedOffset = textPositionCalculator.masterOffsetToProjectedOffset(offset.intValue());
-            if (offset.intValue() >= end && projectedOffset > -1) {
-                final DocumentHighlight documentHighlight = highlights.get(offset);
-                final StyleRange newStyleRange = documentHighlightToStyleRangeTransformer().from(documentHighlight);
-                newStyleRange.start = projectedOffset;
-                viewer.getTextWidget().setStyleRange(newStyleRange);
-            }
+        final StyleRange[] styleRangesToBeMoved = viewer.getTextWidget().getStyleRanges(end,
+                viewer.getTextWidget().getCharCount() - end);
+        for (final StyleRange styleRange : styleRangesToBeMoved) {
+            styleRange.start -= hiddenLength;
         }
     }
 
@@ -152,6 +158,10 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
                 if (projectedOffset >= 0) {
                     final StyleRange newStyleRange = documentHighlightToStyleRangeTransformer().from(highlight);
                     newStyleRange.start = projectedOffset;
+
+                    // TODO - are we always out by 1?
+                    newStyleRange.length = Math.min(newStyleRange.length, viewer.getTextWidget().getCharCount()
+                            - newStyleRange.start);
                     viewer.getTextWidget().setStyleRange(newStyleRange);
                 }
             }
@@ -160,12 +170,29 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
 
     @Override
-    protected void updateIconAt(final int line, final HighlightEvent highlightEvent) {
-        super.updateIconAt(line, highlightEvent);
+    protected Transformer<DocumentHighlight, StyleRange> initDocumentHighlightToStyleRangeTransformer(
+            final ColourManager colourManager) {
+        return new ProjectedDocumentHighlightToStyleRangeTransformer(textPositionCalculator,
+                super.initDocumentHighlightToStyleRangeTransformer(colourManager));
+    }
 
-        if (HighlightEvent.TestPassed.equals(highlightEvent) && line > 0) {
-            final int offset = textPositionCalculator.offsetOfMasterLineNumber(line);
-            final Annotation annotation = findAnnotationAt(offset);
+
+    @Override
+    protected void updateIconAt(final int offset, final HighlightEvent highlightEvent) {
+        final int lineNumber = textPositionCalculator.lineNumberOfMasterOffset(offset);
+        // we don't update line 0 - the feature line. As such, the offset/image
+        // list starts at line 1, so subtract 1 from this accordingly
+        if (lineNumber > 0) {
+            updateIconAtLine(lineNumber - 1, highlightEvent);
+        }
+
+        // we know the offset is for the text, and the 1st part of any line is
+        // the icon character. Therefore, subtract 1 from the offset to
+        // get the offset for the start of the line
+        final int lineOffset = offset - 1;
+
+        if (HighlightEvent.TestPassed.equals(highlightEvent) && lineOffset > 0) {
+            final Annotation annotation = findAnnotationAt(lineOffset);
 
             if (annotation != null) {
                 annotationModel.collapse(annotation);
@@ -240,16 +267,29 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         // turn projection mode on
         viewer.doOperation(ProjectionViewer.TOGGLE);
 
-        textPositionCalculator = new ProjectedTextPositionCalculator(viewer);
+        textPositionCalculator = new ProjectionViewerTextPositionCalculator(viewer);
 
         annotationModel = viewer.getProjectionAnnotationModel();
 
-        final TextRegionVisibilityToggle toggle = new CompositeVisiblityToggle(
+        final TextRegionVisibilityToggle visibilityToggle = new CompositeVisiblityToggle(
                 new UpdateRenderedTextVisibilityToggle(), //
                 new UpdateStyleRangesVisibilityToggle() //
         );
+        annotationModelListener = new ToggleTextVisibilityOnCodeFoldingListener(visibilityToggle);
 
-        annotationModel.addAnnotationModelListener(new ToggleTextVisibilityOnCodeFoldingListener(toggle));
+        annotationModel.addAnnotationModelListener(annotationModelListener);
+    }
+
+
+    private void resetFoldedDocument() {
+        annotationModel.removeAnnotationModelListener(annotationModelListener);
+        final Document document = new Document();
+        viewer.setDocument(document, new AnnotationModel());
+
+        annotationModel = viewer.getProjectionAnnotationModel();
+        annotationModel.addAnnotationModelListener(annotationModelListener);
+        FeatureRunnerPlugin.log(IStatus.INFO, "New Annotation model has "
+                + (annotationModel.getAnnotationIterator().hasNext() ? " Some" : " No ") + " Annotations");
     }
 
     private final class UpdateRenderedTextVisibilityToggle implements TextRegionVisibilityToggle {

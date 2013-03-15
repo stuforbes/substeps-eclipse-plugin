@@ -14,6 +14,8 @@ import com.technophobia.substeps.ui.session.UpdateViewWithSessionListener;
 
 public class SubstepsFeatureTestRunnerViewPart extends ViewPart {
 
+    public static final String NAME = "com.technophobia.substeps.runner.SubstepsResultView";
+
     private SubstepsSessionListenerManager substepsSessionManager;
 
     private RunnerView runnerView;

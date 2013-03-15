@@ -16,4 +16,7 @@ public interface StyledDocumentUpdater {
 
 
     void highlightChanged(HighlightEvent highlightEvent, DocumentHighlight highlight);
+
+
+    void tearDown();
 }

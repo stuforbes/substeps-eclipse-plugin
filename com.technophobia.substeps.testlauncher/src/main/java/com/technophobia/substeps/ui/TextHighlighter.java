@@ -12,4 +12,7 @@ public interface TextHighlighter {
 
 
     void documentChanged(String document, Iterable<HierarchicalTextStructure> textStructures, List<Position> positions);
+
+
+    void reset();
 }

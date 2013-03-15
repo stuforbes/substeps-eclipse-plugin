@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: TestLauncher Unit Tests
 Bundle-SymbolicName: com.technophobia.substeps.testlauncher.tests.unit
-Bundle-Version: 0.0.1.qualifier
+Bundle-Version: 0.2.5.qualifier
 Fragment-Host: com.technophobia.substeps.testlauncher;bundle-version="0.0.1"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Require-Bundle: com.technophobia.substeps.testingtools;bundle-version="0.0.1",

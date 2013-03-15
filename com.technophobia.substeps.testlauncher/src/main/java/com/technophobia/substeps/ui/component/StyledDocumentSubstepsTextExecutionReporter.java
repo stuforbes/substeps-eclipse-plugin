@@ -68,8 +68,6 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
         final TextModelFragment textFragment = findNodeWithIdOrNull(id);
         if (textFragment != null) {
             textFragment.markComplete();
-
-            highlighter.highlight(textFragment);
         } else {
             FeatureRunnerPlugin.log(IStatus.WARNING, "Could not mark node with id " + id
                     + " as complete, as it could not be located");
@@ -91,7 +89,10 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
 
     @Override
     public void resetExecutionState() {
+        // Tear down the datamodel - this does not clear the UI.
         this.textFragments.reset();
+        // Remove all text and highlighting from the UI.
+        this.highlighter.reset();
         this.currentLength = 0;
         this.currentLine = 0;
     }
