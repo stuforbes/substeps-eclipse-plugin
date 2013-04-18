@@ -149,7 +149,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     protected void rerunHighlightsInRange(final int start, final int length) {
         // need to use master document, not text widget
         for (final Integer offset : highlights.keySet()) {
-            if (offset.intValue() > start && offset.intValue() <= start + length) {
+            if (offset.intValue() >= start && offset.intValue() <= start + length) {
                 final DocumentHighlight highlight = highlights.get(offset);
 
                 // if the highlight is still hidden, its projected offset will
@@ -298,6 +298,23 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         public void textVisible(final int offset, final int length) {
             final int end = offset + length;
 
+            if (offset == 0) {
+                // We're expanding the top level element, we have to handle this
+                // one differently
+                doRootNodeExpansion(length);
+            } else {
+                doSubNodeExpansion(offset, end);
+            }
+        }
+
+
+        private void doRootNodeExpansion(final int length) {
+            // TODO Auto-generated method stub
+            doIconOperation(0, length, new ExpandTextCallback());
+        }
+
+
+        private void doSubNodeExpansion(final int offset, final int end) {
             // Offset and length come in relative to source document
             // (ie fully expanded)
             final int mappedStart = textPositionCalculator.masterOffsetToProjectedOffset(offset);
