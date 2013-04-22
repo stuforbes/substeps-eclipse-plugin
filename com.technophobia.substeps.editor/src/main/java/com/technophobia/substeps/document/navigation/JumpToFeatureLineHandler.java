@@ -51,12 +51,28 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.part.FileEditorInput;
 
+import com.technophobia.eclipse.transformer.ProjectToJavaProjectTransformer;
 import com.technophobia.substeps.FeatureEditorPlugin;
 import com.technophobia.substeps.editor.SubstepsEditor;
 import com.technophobia.substeps.model.ParentStep;
+import com.technophobia.substeps.model.StepImplementation;
 import com.technophobia.substeps.model.Syntax;
+import com.technophobia.substeps.supplier.Transformer;
 
 public class JumpToFeatureLineHandler extends AbstractHandler {
+
+    private final Transformer<IProject, IJavaProject> projectToJavaProjectTransformer;
+
+
+    public JumpToFeatureLineHandler() {
+        this(new ProjectToJavaProjectTransformer());
+    }
+
+
+    public JumpToFeatureLineHandler(final Transformer<IProject, IJavaProject> projectToJavaProjectTransformer) {
+        this.projectToJavaProjectTransformer = projectToJavaProjectTransformer;
+    }
+
 
     @Override
     public Object execute(final ExecutionEvent event) throws ExecutionException {
@@ -82,8 +98,16 @@ public class JumpToFeatureLineHandler extends AbstractHandler {
         // from SubstepSuggestionProvider
         final Syntax syntax = FeatureEditorPlugin.instance().syntaxFor(project);
 
-        final List<ParentStep> substeps = syntax.getSortedRootSubSteps();
+        final boolean isSubstep = openIfSubstep(syntax, definitionLine, project, window);
+        if (!isSubstep) {
+            openIfStepImpl(syntax, definitionLine, project);
+        }
+    }
 
+
+    private boolean openIfSubstep(final Syntax syntax, final String definitionLine, final IProject project,
+            final IWorkbenchWindow window) {
+        final List<ParentStep> substeps = syntax.getSortedRootSubSteps();
         ParentStep substepDefinition = null;
 
         for (final ParentStep rootSubStep : substeps) {
@@ -119,7 +143,20 @@ public class JumpToFeatureLineHandler extends AbstractHandler {
             } catch (final PartInitException e) {
                 FeatureEditorPlugin.instance().error("exception opening substep", e);
             }
+            return true;
         }
+        return false;
+    }
+
+
+    private boolean openIfStepImpl(final Syntax syntax, final String definitionLine, final IProject project) {
+        for (final StepImplementation stepImplementation : syntax.getStepImplementations()) {
+            if (Pattern.matches(stepImplementation.getValue(), definitionLine)) {
+                OpenJavaEditor.open(projectToJavaProjectTransformer.from(project), stepImplementation.getMethod());
+                return true;
+            }
+        }
+        return false;
     }
 
 
