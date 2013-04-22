@@ -72,13 +72,15 @@ public class UpdateViewWithSessionListenerTest {
     public void startingNewSessionResetsNotificationCountForExecutionReporters() {
         context.checking(new Expectations() {
             {
+                oneOf(executionReporter).updateExecutingProject("A Project");
+
                 exactly(2).of(executionReporter).allExecutionNodesAdded();
                 oneOf(executionReporter).resetExecutionState();
             }
         });
 
         sessionListener.runningBegins();
-        sessionListener.sessionStarted();
+        sessionListener.sessionStarted("A Project");
         sessionListener.runningBegins();
     }
 

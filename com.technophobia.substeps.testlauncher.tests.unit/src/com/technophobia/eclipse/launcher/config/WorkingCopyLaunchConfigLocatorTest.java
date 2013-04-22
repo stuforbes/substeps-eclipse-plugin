@@ -37,7 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.eclipse.launcher.exception.ExceptionReporter;
-import com.technophobia.eclipse.transformer.Locator;
+import com.technophobia.eclipse.transformer.MultiLocator;
 import com.technophobia.substeps.supplier.Transformer;
 
 @RunWith(JMock.class)
@@ -45,7 +45,7 @@ public class WorkingCopyLaunchConfigLocatorTest {
 
     private Mockery context;
 
-    private Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> locator;
+    private MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> locator;
 
     private ILaunchManager launchManager;
 

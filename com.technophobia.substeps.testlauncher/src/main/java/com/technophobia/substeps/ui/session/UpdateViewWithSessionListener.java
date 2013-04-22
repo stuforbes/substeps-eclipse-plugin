@@ -24,9 +24,10 @@ public class UpdateViewWithSessionListener implements SubstepsSessionListener {
 
 
     @Override
-    public void sessionStarted() {
+    public void sessionStarted(final String projectName) {
         this.runningStarted = false;
         this.executionReporter.resetExecutionState();
+        this.executionReporter.updateExecutingProject(projectName);
     }
 
 

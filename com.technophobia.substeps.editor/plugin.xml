@@ -122,6 +122,21 @@
           id="com.technophobia.substeps.editor.navigate.to.substep.definition"
           name="NavigateToSubstepDefinition">
     </command>
+    <command
+          defaultHandler="com.technophobia.substeps.document.navigation.JumpToFeatureLineHandler"
+          id="com.technophobia.substeps.editor.navigate.to.feature.line"
+          name="NavigateToFeatureLine">
+       <commandParameter
+             id="com.technophobia.substeps.editor.navigate.to.feature.line.current.project"
+             name="current-project"
+             optional="false">
+       </commandParameter>
+       <commandParameter
+             id="com.technophobia.substeps.editor.navigate.to.feature.line.definition.line"
+             name="definition-line"
+             optional="false">
+       </commandParameter>
+    </command>
   </extension>
   <extension
         point="org.eclipse.ui.contexts">

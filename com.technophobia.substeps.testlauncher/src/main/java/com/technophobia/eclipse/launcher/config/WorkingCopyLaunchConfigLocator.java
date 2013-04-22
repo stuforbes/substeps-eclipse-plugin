@@ -27,10 +27,10 @@ import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.core.ILaunchManager;
 
 import com.technophobia.eclipse.launcher.exception.ExceptionReporter;
-import com.technophobia.eclipse.transformer.Locator;
+import com.technophobia.eclipse.transformer.MultiLocator;
 import com.technophobia.substeps.supplier.Transformer;
 
-public class WorkingCopyLaunchConfigLocator implements Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> {
+public class WorkingCopyLaunchConfigLocator implements MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> {
 
     private final String[] matchingAttributeNames;
     private final ILaunchManager launchManager;

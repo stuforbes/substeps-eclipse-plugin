@@ -21,16 +21,16 @@ import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 
 import com.technophobia.eclipse.launcher.exception.ExceptionReporter;
-import com.technophobia.eclipse.transformer.Locator;
+import com.technophobia.eclipse.transformer.MultiLocator;
 
 public class FindExistingOrNewLaunchConfigFactory implements LaunchConfigurationFactory {
 
     private final ExceptionReporter exceptionReporter;
-    private final Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> existingConfigLocator;
+    private final MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> existingConfigLocator;
 
 
     public FindExistingOrNewLaunchConfigFactory(
-            final Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> existingConfigLocator,
+            final MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> existingConfigLocator,
             final ExceptionReporter exceptionReporter) {
         this.existingConfigLocator = existingConfigLocator;
         this.exceptionReporter = exceptionReporter;

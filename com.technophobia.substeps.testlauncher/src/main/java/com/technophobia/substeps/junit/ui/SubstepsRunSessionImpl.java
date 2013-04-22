@@ -194,7 +194,8 @@ public class SubstepsRunSessionImpl implements SubstepsRunSession, TestRunStats 
                 decrementRemainingChildItemsCallback(), checkRemainingChildItemsPredicate());
 
         testRunnerClient = new RemoteTestRunnerClient();
-        testRunnerClient.startListening(new SubstepsRunListener[] { new TestSessionNotifier() }, port);
+        testRunnerClient.startListening(new SubstepsRunListener[] { new TestSessionNotifier(project.getProject()
+                .getName()) }, port);
 
         final ILaunchManager launchManager = DebugPlugin.getDefault().getLaunchManager();
         launchManager.addLaunchListener(new ILaunchesListener2() {
@@ -474,7 +475,8 @@ public class SubstepsRunSessionImpl implements SubstepsRunSession, TestRunStats 
         if (testRoot != null)
             return;
 
-//        throw new UnsupportedOperationException("Import from disk not supported");
+        // throw new
+        // UnsupportedOperationException("Import from disk not supported");
 
         /*
          * try { JUnitModel.importIntoTestRunSession(getSwapFile(), this); }
@@ -640,6 +642,14 @@ public class SubstepsRunSessionImpl implements SubstepsRunSession, TestRunStats 
      */
     private class TestSessionNotifier implements SubstepsRunListener {
 
+        private final String projectName;
+
+
+        public TestSessionNotifier(final String projectName) {
+            this.projectName = projectName;
+        }
+
+
         @Override
         public void testRunStarted(final int testCount) {
             incompleteParentItems.reset();
@@ -655,7 +665,7 @@ public class SubstepsRunSessionImpl implements SubstepsRunSession, TestRunStats 
 
             final Object[] listeners = sessionListeners.getListeners();
             for (int i = 0; i < listeners.length; ++i) {
-                ((SubstepsSessionListener) listeners[i]).sessionStarted();
+                ((SubstepsSessionListener) listeners[i]).sessionStarted(projectName);
             }
         }
 

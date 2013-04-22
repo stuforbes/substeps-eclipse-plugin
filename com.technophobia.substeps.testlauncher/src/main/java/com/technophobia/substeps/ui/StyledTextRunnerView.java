@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.PaintObjectListener;
@@ -13,11 +14,15 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.IWorkbenchPartSite;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.eclipse.transformer.ProjectByNameLocator;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
+import com.technophobia.substeps.navigation.JumpToEditorLineCallback;
+import com.technophobia.substeps.supplier.Callback2;
 import com.technophobia.substeps.supplier.Supplier;
 import com.technophobia.substeps.supplier.Transformer;
 import com.technophobia.substeps.ui.component.ListDelegateHierarchicalTextCollection;
@@ -26,6 +31,7 @@ import com.technophobia.substeps.ui.component.StyledDocumentUpdater;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
 import com.technophobia.substeps.ui.component.SubstepsIcon;
 import com.technophobia.substeps.ui.component.TextModelFragmentFactory;
+import com.technophobia.substeps.ui.event.ClickOnStyledTextLineMouseListener;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.IconHighlight;
 import com.technophobia.substeps.ui.model.StyledDocument;
@@ -42,18 +48,24 @@ public class StyledTextRunnerView implements RunnerView {
     private StyledText textComponent;
     private PaintObjectListener paintIconsListener;
     private Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer;
+    private Callback2<IProject, String> jumpToLineInEditorCallback;
 
     private List<HierarchicalIconContainer> icons;
+    private IProject currentProject;
 
     private final StyledDocumentUpdater styledDocumentUpdater;
     private final SubstepsIconProvider iconProvider;
     private final ColourManager colourManager;
+    private final IWorkbenchPartSite site;
 
 
-    public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
+    public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider,
+            final IWorkbenchPartSite site) {
         this.colourManager = colourManager;
         this.iconProvider = iconProvider;
+        this.site = site;
         this.icons = new ArrayList<HierarchicalIconContainer>();
+        this.currentProject = null;
 
         this.styledDocumentUpdater = updateTextComponentCallback();
     }
@@ -65,6 +77,7 @@ public class StyledTextRunnerView implements RunnerView {
         this.textComponent = createTextComponent(parent);
         this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyIcons());
         this.documentHighlightToStyleRangeTransformer = initDocumentHighlightToStyleRangeTransformer(colourManager);
+        this.jumpToLineInEditorCallback = new JumpToEditorLineCallback(site);
 
         // textComponent.setAlwaysShowScrollBars(true);
         final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
@@ -72,6 +85,7 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.setLineSpacing(5);
         textComponent.setEditable(false);
 
+        textComponent.addMouseListener(new ClickOnStyledTextLineMouseListener(doJumpToEditorCallback()));
         textComponent.addPaintObjectListener(paintIconsListener);
 
     }
@@ -84,6 +98,7 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent = null;
 
         icons.clear();
+        this.currentProject = null;
     }
 
 
@@ -95,7 +110,7 @@ public class StyledTextRunnerView implements RunnerView {
         final TextModelFragmentFactory textModelFragmentFactory = new TextModelFragmentFactory(textCollection,
                 stateChangeHighlighter);
         return new StyledDocumentSubstepsTextExecutionReporter(textCollection, textModelFragmentFactory,
-                stateChangeHighlighter);
+                stateChangeHighlighter, updateCurrentProjectCallback(), new ProjectByNameLocator());
     }
 
 
@@ -241,6 +256,26 @@ public class StyledTextRunnerView implements RunnerView {
 
     protected void doIconOperation(final int offset, final Callback1<HierarchicalIconContainer> callback) {
         doIconOperation(offset, Integer.MAX_VALUE - offset, callback);
+    }
+
+
+    private Callback1<IProject> updateCurrentProjectCallback() {
+        return new Callback1<IProject>() {
+            @Override
+            public void callback(final IProject project) {
+                StyledTextRunnerView.this.currentProject = project;
+            }
+        };
+    }
+
+
+    private Callback1<String> doJumpToEditorCallback() {
+        return new Callback1<String>() {
+            @Override
+            public void callback(final String line) {
+                jumpToLineInEditorCallback.doCallback(currentProject, line);
+            }
+        };
     }
 
 

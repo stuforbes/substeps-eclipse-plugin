@@ -80,7 +80,7 @@ public class TestSessionListener implements SubstepsSessionListener {
 
 
     @Override
-    public void sessionStarted() {
+    public void sessionStarted(final String projectName) {
         testViewer.registerViewersRefresh();
 
         updateJobManager.startUpdateJobs();

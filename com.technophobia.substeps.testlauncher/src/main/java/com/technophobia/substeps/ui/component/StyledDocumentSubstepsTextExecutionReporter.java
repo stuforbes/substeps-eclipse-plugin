@@ -5,9 +5,12 @@ import static com.technophobia.substeps.util.LogicOperators.not;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.text.Position;
 
+import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.eclipse.transformer.Locator;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.supplier.Predicate;
 import com.technophobia.substeps.ui.TextHighlighter;
@@ -17,23 +20,33 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
 
     private static final String NULL_PARENT_ID = "-1";
 
+    private final HierarchicalTextCollection textFragments;
+    private final HierarchicalTextStructureFactory textStructureFactory;
+    private final TextHighlighter highlighter;
+    private final Locator<IProject, String> projectLocator;
+    private final Callback1<IProject> executingProjectNotifier;
+
     private int currentLength;
     private int currentLine;
 
-    private final HierarchicalTextCollection textFragments;
-
-    private final HierarchicalTextStructureFactory textStructureFactory;
-
-    private final TextHighlighter highlighter;
-
 
     public StyledDocumentSubstepsTextExecutionReporter(final HierarchicalTextCollection textCollection,
-            final HierarchicalTextStructureFactory textStructureFactory, final TextHighlighter highlighter) {
+            final HierarchicalTextStructureFactory textStructureFactory, final TextHighlighter highlighter,
+            final Callback1<IProject> executingProjectNotifier, final Locator<IProject, String> projectLocator) {
         this.textFragments = textCollection;
         this.textStructureFactory = textStructureFactory;
         this.highlighter = highlighter;
+        this.executingProjectNotifier = executingProjectNotifier;
+        this.projectLocator = projectLocator;
+
         this.currentLength = 0;
         this.currentLine = 0;
+    }
+
+
+    @Override
+    public void updateExecutingProject(final String projectName) {
+        this.executingProjectNotifier.callback(projectLocator.one(projectName));
     }
 
 

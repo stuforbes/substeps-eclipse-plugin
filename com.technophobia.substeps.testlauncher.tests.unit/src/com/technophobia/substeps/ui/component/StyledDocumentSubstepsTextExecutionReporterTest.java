@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.jface.text.Position;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
@@ -13,6 +14,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.eclipse.transformer.Locator;
 import com.technophobia.substeps.supplier.Predicate;
 import com.technophobia.substeps.ui.TextHighlighter;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
@@ -24,12 +27,15 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
     private TextHighlighter textHighlighter;
     private HierarchicalTextCollection textCollection;
+    private Callback1<IProject> executingProjectNotifier;
+    private Locator<IProject, String> projectByNameLocator;
 
     private SubstepsTestExecutionReporter executionReporter;
 
     private HierarchicalTextStructureFactory textFactory;
 
 
+    @SuppressWarnings("unchecked")
     @Before
     public void initialise() {
         // this.context = new Mockery();
@@ -37,9 +43,11 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         this.textHighlighter = context.mock(TextHighlighter.class);
         this.textCollection = context.mock(HierarchicalTextCollection.class);
         this.textFactory = context.mock(HierarchicalTextStructureFactory.class);
+        this.executingProjectNotifier = context.mock(Callback1.class);
+        this.projectByNameLocator = context.mock(Locator.class);
 
         this.executionReporter = new StyledDocumentSubstepsTextExecutionReporter(textCollection, textFactory,
-                textHighlighter);
+                textHighlighter, executingProjectNotifier, projectByNameLocator);
     }
 
 
@@ -49,8 +57,16 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         final String text = "";
         final List<Position> positions = new ArrayList<Position>();
 
+        final String projectName = "A-Project";
+        final IProject project = context.mock(IProject.class);
+
         context.checking(new Expectations() {
             {
+                oneOf(projectByNameLocator).one(projectName);
+                will(returnValue(project));
+
+                oneOf(executingProjectNotifier).callback(project);
+
                 oneOf(textHighlighter).documentChanged(text, Collections.<HierarchicalTextStructure> emptyList(),
                         positions);
 
@@ -59,12 +75,16 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
             }
         });
 
+        executionReporter.updateExecutingProject(projectName);
         executionReporter.allExecutionNodesAdded();
     }
 
 
     @Test
     public void singleExecutionNodeProducesCorrectTextModelString() {
+
+        final String projectName = "A-Project";
+        final IProject project = context.mock(IProject.class);
 
         final String text = "Feature: This is a feature";
 
@@ -73,6 +93,11 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
         context.checking(new Expectations() {
             {
+                oneOf(projectByNameLocator).one(projectName);
+                will(returnValue(project));
+
+                oneOf(executingProjectNotifier).callback(project);
+
                 oneOf(textHighlighter).documentChanged(text, textStructures, Collections.<Position> emptyList());
 
                 oneOf(textFactory).createTextStructureFor(0, 0, "1", null, text);
@@ -85,6 +110,7 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
             }
         });
 
+        executionReporter.updateExecutingProject(projectName);
         executionReporter.addExecutionNode("1", null, "Feature: This is a feature");
         executionReporter.allExecutionNodesAdded();
     }
@@ -93,6 +119,9 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void multipleExecutionNodesProduceCorrectTextModelString() {
+
+        final String projectName = "A-Project";
+        final IProject project = context.mock(IProject.class);
 
         final String feature = "Feature: This is a feature";
         final String scenario = "Scenario: A scenario";
@@ -118,6 +147,11 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
         context.checking(new Expectations() {
             {
+                oneOf(projectByNameLocator).one(projectName);
+                will(returnValue(project));
+
+                oneOf(executingProjectNotifier).callback(project);
+
                 oneOf(textFactory).createTextStructureFor(0, 0, "0", null, feature);
                 will(returnValue(featureStructure));
 
@@ -152,6 +186,7 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
             }
         });
 
+        executionReporter.updateExecutingProject(projectName);
         executionReporter.addExecutionNode("0", null, "Feature: This is a feature");
         executionReporter.addExecutionNode("1", "0", "Scenario: A scenario");
         executionReporter.addExecutionNode("2", "1", "Given something");
@@ -163,6 +198,9 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void nestedExecutionNodesProduceCorrectTextModelString() {
+
+        final String projectName = "A-Project";
+        final IProject project = context.mock(IProject.class);
 
         final String feature = "Feature: This is a feature";
         final String scenario = "Scenario: A scenario";
@@ -192,6 +230,11 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
         context.checking(new Expectations() {
             {
+                oneOf(projectByNameLocator).one(projectName);
+                will(returnValue(project));
+
+                oneOf(executingProjectNotifier).callback(project);
+
                 oneOf(textFactory).createTextStructureFor(0, 0, "0", null, feature);
                 will(returnValue(featureStructure));
 
@@ -229,6 +272,7 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
             }
         });
 
+        executionReporter.updateExecutingProject(projectName);
         executionReporter.addExecutionNode("0", null, "Feature: This is a feature");
         executionReporter.addExecutionNode("1", "0", "Scenario: A scenario");
         executionReporter.addExecutionNode("2", "1", "Given something");
@@ -241,6 +285,9 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void resetExecutionStateRemovesAllTextFragments() {
+
+        final String projectName = "A-Project";
+        final IProject project = context.mock(IProject.class);
 
         final String feature = "Feature: This is a feature";
         final String scenario = "Scenario: A scenario";
@@ -260,6 +307,11 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
 
         context.checking(new Expectations() {
             {
+                oneOf(projectByNameLocator).one(projectName);
+                will(returnValue(project));
+
+                oneOf(executingProjectNotifier).callback(project);
+
                 oneOf(textFactory).createTextStructureFor(0, 0, "0", null, feature);
                 will(returnValue(featureStructure));
 
@@ -294,6 +346,7 @@ public class StyledDocumentSubstepsTextExecutionReporterTest {
         executionReporter.addExecutionNode("2", "1", given);
         executionReporter.addExecutionNode("3", "2", then);
         executionReporter.resetExecutionState();
+        executionReporter.updateExecutingProject(projectName);
         executionReporter.allExecutionNodesAdded();
     }
 

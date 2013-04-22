@@ -57,6 +57,7 @@ public class TextChangedToDocumentUpdater implements TextHighlighter {
             }
         }
         updater.documentChanged(new StyledDocument(document, highlights, positions, offsetToParentOffsetMapping));
+
     }
 
 

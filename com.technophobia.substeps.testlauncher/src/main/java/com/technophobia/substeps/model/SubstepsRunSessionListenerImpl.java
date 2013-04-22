@@ -45,7 +45,7 @@ public class SubstepsRunSessionListenerImpl implements SubstepsRunSessionListene
 
 
             @Override
-            public void sessionStarted() {
+            public void sessionStarted(final String projectName) {
                 final Object[] testRunListeners = FeatureRunnerPlugin.instance().getSubstepsRunListeners()
                         .getListeners();
                 for (int i = 0; i < testRunListeners.length; i++) {

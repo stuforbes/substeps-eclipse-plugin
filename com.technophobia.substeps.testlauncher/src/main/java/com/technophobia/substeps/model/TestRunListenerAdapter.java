@@ -70,7 +70,7 @@ public class TestRunListenerAdapter implements SubstepsSessionListener {
 
 
     @Override
-    public void sessionStarted() {
+    public void sessionStarted(final String projectName) {
         // wait until all test are added
     }
 

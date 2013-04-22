@@ -29,14 +29,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.eclipse.launcher.exception.ExceptionReporter;
-import com.technophobia.eclipse.transformer.Locator;
+import com.technophobia.eclipse.transformer.MultiLocator;
 
 @RunWith(JMock.class)
 public class FindExistingOrNewLaunchConfigFactoryTest {
 
     private Mockery context;
 
-    private Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> existingConfigLocator;
+    private MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> existingConfigLocator;
     private ExceptionReporter exceptionReporter;
 
     private LaunchConfigurationFactory configFactory;
@@ -47,7 +47,7 @@ public class FindExistingOrNewLaunchConfigFactoryTest {
     public void initialise() {
         this.context = new Mockery();
 
-        this.existingConfigLocator = context.mock(Locator.class);
+        this.existingConfigLocator = context.mock(MultiLocator.class);
         this.exceptionReporter = context.mock(ExceptionReporter.class);
 
         this.configFactory = new FindExistingOrNewLaunchConfigFactory(existingConfigLocator, exceptionReporter);

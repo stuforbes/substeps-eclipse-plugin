@@ -40,7 +40,7 @@ import com.technophobia.eclipse.launcher.config.WorkingCopyLaunchConfigLocator;
 import com.technophobia.eclipse.launcher.exception.DialogExceptionReporter;
 import com.technophobia.eclipse.launcher.exception.ExceptionReporter;
 import com.technophobia.eclipse.transformer.Decorator;
-import com.technophobia.eclipse.transformer.Locator;
+import com.technophobia.eclipse.transformer.MultiLocator;
 import com.technophobia.eclipse.transformer.Transformers;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.junit.launcher.config.ResourceMappingDecorator;
@@ -56,7 +56,7 @@ public class SubstepsFeatureLaunchShortcut implements ILaunchShortcut2 {
     private final LaunchConfigurationWorkingCopyFactory workingCopyFactory;
     private final LaunchConfigurationFactory launchConfigurationFactory;
 
-    private final Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> configLocator;
+    private final MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> configLocator;
 
 
     /**
@@ -75,7 +75,7 @@ public class SubstepsFeatureLaunchShortcut implements ILaunchShortcut2 {
 
     public SubstepsFeatureLaunchShortcut(final LaunchConfigurationWorkingCopyFactory workingCopyFactory,
             final LaunchConfigurationFactory launchConfigurationFactory,
-            final Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> configLocator) {
+            final MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> configLocator) {
         this.workingCopyFactory = workingCopyFactory;
         this.launchConfigurationFactory = launchConfigurationFactory;
         this.configLocator = configLocator;
@@ -160,7 +160,7 @@ public class SubstepsFeatureLaunchShortcut implements ILaunchShortcut2 {
     }
 
 
-    private Locator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> configLocator(
+    private MultiLocator<ILaunchConfiguration, ILaunchConfigurationWorkingCopy> configLocator(
             final ILaunchManager launchManager, final ExceptionReporter exceptionReporter) {
         return new WorkingCopyLaunchConfigLocator(new String[] { ATTR_FEATURE_FILE,
                 SubstepsLaunchConfigurationConstants.ATTR_FEATURE_PROJECT }, launchManager, new DialogConfigSelector(

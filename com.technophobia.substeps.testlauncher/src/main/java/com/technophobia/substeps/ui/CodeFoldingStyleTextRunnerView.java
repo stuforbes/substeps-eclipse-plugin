@@ -24,6 +24,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
@@ -53,8 +54,9 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     private IAnnotationModelListener annotationModelListener;
 
 
-    public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider) {
-        super(colourManager, iconProvider);
+    public CodeFoldingStyleTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider,
+            final IWorkbenchPartSite site) {
+        super(colourManager, iconProvider, site);
         this.highlights = new HashMap<Integer, DocumentHighlight>();
         this.masterToProjectedOffsetTransformer = initMasterToProjectedOffsetTransformer();
         this.oldAnnotationsByMasterOffset = new HashMap<Integer, Annotation>();

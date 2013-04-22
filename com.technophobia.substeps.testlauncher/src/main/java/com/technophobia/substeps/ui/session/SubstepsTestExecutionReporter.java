@@ -26,4 +26,7 @@ public interface SubstepsTestExecutionReporter {
 
 
     void resetExecutionState();
+
+
+    void updateExecutingProject(String projectName);
 }

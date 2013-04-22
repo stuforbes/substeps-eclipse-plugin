@@ -25,8 +25,10 @@ public interface SubstepsSessionListener {
 
     /**
      * A test run has started.
+     * 
+     * @param projectName
      */
-    public void sessionStarted();
+    public void sessionStarted(String projectName);
 
 
     /**

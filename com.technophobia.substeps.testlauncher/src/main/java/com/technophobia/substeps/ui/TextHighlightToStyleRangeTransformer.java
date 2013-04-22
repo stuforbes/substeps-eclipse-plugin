@@ -19,8 +19,12 @@ public class TextHighlightToStyleRangeTransformer implements Transformer<TextHig
 
     @Override
     public StyleRange from(final TextHighlight from) {
-        return new StyleRange(from.getOffset(), from.getLength(), colourManager.getColor(from.getColour()),
-                colourManager.getColor(StyledTextRunnerView.WHITE), from.isBold() ? SWT.BOLD : SWT.NONE);
+        final StyleRange styleRange = new StyleRange(from.getOffset(), from.getLength(), colourManager.getColor(from
+                .getColour()), colourManager.getColor(StyledTextRunnerView.WHITE), from.isBold() ? SWT.BOLD : SWT.NONE);
+        styleRange.underline = true;
+        styleRange.underlineStyle = SWT.UNDERLINE_LINK;
+        styleRange.underlineColor = colourManager.getColor(StyledTextRunnerView.WHITE);
+        return styleRange;
     }
 
 }
