@@ -64,15 +64,6 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
 
     @Override
-    public void createPartControl(final Composite parent) {
-
-        configureFolding(parent);
-
-        super.createPartControl(parent);
-    }
-
-
-    @Override
     public void dispose() {
         this.highlights.clear();
         this.oldAnnotationsByMasterOffset.clear();
@@ -98,6 +89,7 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
 
     @Override
     protected StyledText createTextComponent(final Composite parent) {
+        configureFolding(parent);
         return viewer.getTextWidget();
     }
 
@@ -261,6 +253,9 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
         final ISharedTextColors textColours = EditorsUI.getSharedTextColors();
         final IOverviewRuler overviewRuler = new OverviewRuler(annotationAccess, 10, textColours);
         viewer = new MappingEnabledProjectionViewer(parent, ruler, overviewRuler, true, SWT.V_SCROLL | SWT.H_SCROLL);
+
+        viewer.getControl().setLayoutData(styledTextLayoutData(true));
+
         final Document document = new Document();
         viewer.setDocument(document, new AnnotationModel());
         final ProjectionSupport projectionSupport = new ProjectionSupport(viewer, annotationAccess, textColours);

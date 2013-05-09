@@ -194,6 +194,12 @@ public class SubstepsFeatureMessages {
     public static String OpenEditorAction_error_dialog_message;
     public static String OpenEditorAction_message_cannotopen;
 
+    /**
+     * New TestRunner UI language goes here
+     */
+    public static String ActionShowErrorsTooltip;
+    public static String ActionShowErrorsLabel;
+
     static {
         NLS.initializeMessages(BUNDLE_NAME, SubstepsFeatureMessages.class);
     }

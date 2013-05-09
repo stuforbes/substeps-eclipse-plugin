@@ -7,13 +7,17 @@ import java.util.Map;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.PaintObjectListener;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchPartSite;
 
 import com.technophobia.eclipse.transformer.Callback1;
@@ -22,9 +26,11 @@ import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.navigation.JumpToEditorLineCallback;
+import com.technophobia.substeps.supplier.Callback;
 import com.technophobia.substeps.supplier.Callback2;
 import com.technophobia.substeps.supplier.Supplier;
 import com.technophobia.substeps.supplier.Transformer;
+import com.technophobia.substeps.ui.action.ShowErrorsAction;
 import com.technophobia.substeps.ui.component.ListDelegateHierarchicalTextCollection;
 import com.technophobia.substeps.ui.component.StyledDocumentSubstepsTextExecutionReporter;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater;
@@ -46,6 +52,7 @@ public class StyledTextRunnerView implements RunnerView {
     protected static final int IMAGE_WIDTH = 10;
 
     private StyledText textComponent;
+    private StyledText errorComponent;
     private PaintObjectListener paintIconsListener;
     private Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer;
     private Callback2<IProject, String> jumpToLineInEditorCallback;
@@ -57,6 +64,7 @@ public class StyledTextRunnerView implements RunnerView {
     private final SubstepsIconProvider iconProvider;
     private final ColourManager colourManager;
     private final IWorkbenchPartSite site;
+    private SashForm sash;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider,
@@ -74,13 +82,22 @@ public class StyledTextRunnerView implements RunnerView {
     @Override
     public void createPartControl(final Composite parent) {
 
-        this.textComponent = createTextComponent(parent);
+        this.sash = createComposite(parent);
+
+        this.textComponent = createTextComponent(sash);
+        this.errorComponent = createErrorComponent(sash);
+        sash.setMaximizedControl(textComponent);
+
+        final IToolBarManager toolBarManager = ((IViewSite) site).getActionBars().getToolBarManager();
+        toolBarManager.add(new ShowErrorsAction(showErrorComponent(), hideErrorComponent(), iconProvider));
+        // final Button button = new Button(composite, SWT.TOGGLE);
+
         this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyIcons());
         this.documentHighlightToStyleRangeTransformer = initDocumentHighlightToStyleRangeTransformer(colourManager);
         this.jumpToLineInEditorCallback = new JumpToEditorLineCallback(site);
 
         // textComponent.setAlwaysShowScrollBars(true);
-        final Font font = new Font(parent.getDisplay(), parent.getFont().getFontData()[0].name, 10, SWT.NORMAL);
+        final Font font = new Font(sash.getDisplay(), sash.getFont().getFontData()[0].name, 10, SWT.NORMAL);
         textComponent.setFont(font);
         textComponent.setLineSpacing(5);
         textComponent.setEditable(false);
@@ -88,6 +105,26 @@ public class StyledTextRunnerView implements RunnerView {
         textComponent.addMouseListener(new ClickOnStyledTextLineMouseListener(doJumpToEditorCallback()));
         textComponent.addPaintObjectListener(paintIconsListener);
 
+    }
+
+
+    private Callback showErrorComponent() {
+        return new Callback() {
+            @Override
+            public void doCallback() {
+                sash.setMaximizedControl(null);
+            }
+        };
+    }
+
+
+    private Callback hideErrorComponent() {
+        return new Callback() {
+            @Override
+            public void doCallback() {
+                sash.setMaximizedControl(textComponent);
+            }
+        };
     }
 
 
@@ -115,7 +152,30 @@ public class StyledTextRunnerView implements RunnerView {
 
 
     protected StyledText createTextComponent(final Composite parent) {
-        return new StyledText(parent, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+        final StyledText styledText = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
+        // styledText.setBackground(colourManager.getColor(new RGB(0, 0, 0)));
+        // styledText.setLayoutData(styledTextLayoutData(true));
+        // styledText.setLayout(new GridLayout(1, false));
+        // styledText.setFont(parent.getFont());
+        return styledText;
+    }
+
+
+    protected StyledText createErrorComponent(final Composite parent) {
+        final StyledText styledText = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
+        // styledText.setBackground(colourManager.getColor(new RGB(255, 0, 0)));
+        // styledText.setLayoutData(styledTextLayoutData(false));
+        // styledText.setLayout(new GridLayout(1, false));
+        // styledText.setFont(parent.getFont());
+        return styledText;
+    }
+
+
+    protected Object styledTextLayoutData(final boolean grabExcessVerticalSpace) {
+        final GridData layoutData = new GridData(GridData.FILL, grabExcessVerticalSpace ? GridData.FILL : 0, true,
+                grabExcessVerticalSpace);
+        // layoutData.grabExcessVerticalSpace = grabExcessVerticalSpace;
+        return layoutData;
     }
 
 
@@ -331,5 +391,19 @@ public class StyledTextRunnerView implements RunnerView {
                 return icons;
             }
         };
+    }
+
+
+    private SashForm createComposite(final Composite parent) {
+        final SashForm sashForm = new SashForm(parent, SWT.VERTICAL | SWT.NO_SCROLL);
+        // sashForm.setBackground(colourManager.getColor(new RGB(0, 255, 0)));
+        // final GridLayout layout = new GridLayout(1, false);
+        // layout.marginWidth = 0;
+        // layout.marginHeight = 0;
+        // composite.setLayout(layout);
+        // final GridData gridData = new GridData(GridData.FILL, GridData.FILL,
+        // true, true);
+        // composite.setLayoutData(gridData);
+        return sashForm;
     }
 }

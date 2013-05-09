@@ -32,6 +32,8 @@ public class SubstepsFeatureTestRunnerViewPart extends ViewPart {
         this.colourManager = new ColourManager();
         this.iconProvider = new SubstepsIconProvider(new ImageDescriptorLoader());
         this.runnerView = new CodeFoldingStyleTextRunnerView(colourManager, iconProvider, getSite());
+        // this.runnerView = new StyledTextRunnerView(colourManager,
+        // iconProvider, getSite());
 
         this.substepsSessionManager = new SubstepsSessionListenerManager(new UpdateViewWithSessionListener(
                 runnerView.executionReporter()));
