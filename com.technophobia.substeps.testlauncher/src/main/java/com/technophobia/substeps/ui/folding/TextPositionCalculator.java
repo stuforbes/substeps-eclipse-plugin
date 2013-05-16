@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.folding;
 
 public interface TextPositionCalculator {
 

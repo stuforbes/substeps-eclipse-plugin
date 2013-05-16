@@ -9,6 +9,7 @@ import org.eclipse.ui.part.ViewPart;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
+import com.technophobia.substeps.ui.image.ImageDescriptorLoader;
 import com.technophobia.substeps.ui.run.SubstepsSessionListenerManager;
 import com.technophobia.substeps.ui.session.UpdateViewWithSessionListener;
 

@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.paint;
 
 import java.util.List;
 
@@ -10,6 +10,7 @@ import org.eclipse.swt.graphics.Image;
 
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.supplier.Supplier;
+import com.technophobia.substeps.ui.model.HierarchicalIconContainer;
 
 public class PaintRenderedTextListener implements PaintObjectListener {
 

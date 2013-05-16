@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.folding;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;

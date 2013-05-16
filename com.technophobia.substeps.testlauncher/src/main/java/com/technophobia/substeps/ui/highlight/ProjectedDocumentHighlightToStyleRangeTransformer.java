@@ -1,8 +1,9 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.highlight;
 
 import org.eclipse.swt.custom.StyleRange;
 
 import com.technophobia.substeps.supplier.Transformer;
+import com.technophobia.substeps.ui.folding.TextPositionCalculator;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 
 public class ProjectedDocumentHighlightToStyleRangeTransformer implements Transformer<DocumentHighlight, StyleRange> {

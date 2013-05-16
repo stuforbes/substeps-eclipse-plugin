@@ -13,6 +13,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.substeps.supplier.Transformer;
+import com.technophobia.substeps.ui.folding.TextPositionCalculator;
+import com.technophobia.substeps.ui.highlight.ProjectedDocumentHighlightToStyleRangeTransformer;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
 import com.technophobia.substeps.ui.model.TextHighlight;
 

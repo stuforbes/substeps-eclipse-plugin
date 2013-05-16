@@ -1,7 +1,7 @@
 package com.technophobia.substeps.ui.component;
 
 import com.technophobia.substeps.supplier.Predicate;
-import com.technophobia.substeps.ui.TextHighlighter;
+import com.technophobia.substeps.ui.highlight.TextHighlighter;
 
 public class TextModelFragmentFactory implements HierarchicalTextStructureFactory {
 

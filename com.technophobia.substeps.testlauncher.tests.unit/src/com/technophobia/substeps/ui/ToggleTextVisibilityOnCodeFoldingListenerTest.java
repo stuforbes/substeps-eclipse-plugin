@@ -12,6 +12,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import com.technophobia.substeps.ui.folding.TextRegionVisibilityToggle;
+import com.technophobia.substeps.ui.folding.ToggleTextVisibilityOnCodeFoldingListener;
+
 @RunWith(JMock.class)
 public class ToggleTextVisibilityOnCodeFoldingListenerTest {
 

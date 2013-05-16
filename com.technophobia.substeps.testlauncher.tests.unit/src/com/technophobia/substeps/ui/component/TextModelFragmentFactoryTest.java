@@ -11,7 +11,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.substeps.supplier.Predicate;
-import com.technophobia.substeps.ui.TextHighlighter;
+import com.technophobia.substeps.ui.highlight.TextHighlighter;
 
 @RunWith(JMock.class)
 public class TextModelFragmentFactoryTest {

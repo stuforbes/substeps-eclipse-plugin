@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.highlight;
 
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.graphics.GlyphMetrics;

@@ -1,81 +1,49 @@
 package com.technophobia.substeps.ui;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.PaintObjectListener;
 import org.eclipse.swt.custom.SashForm;
-import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.custom.ViewForm;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Layout;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchPartSite;
 
 import com.technophobia.eclipse.transformer.Callback1;
 import com.technophobia.eclipse.transformer.ProjectByNameLocator;
-import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
-import com.technophobia.substeps.navigation.JumpToEditorLineCallback;
 import com.technophobia.substeps.supplier.Callback;
-import com.technophobia.substeps.supplier.Callback2;
-import com.technophobia.substeps.supplier.Supplier;
-import com.technophobia.substeps.supplier.Transformer;
 import com.technophobia.substeps.ui.action.ShowErrorsAction;
 import com.technophobia.substeps.ui.component.ListDelegateHierarchicalTextCollection;
 import com.technophobia.substeps.ui.component.StyledDocumentSubstepsTextExecutionReporter;
-import com.technophobia.substeps.ui.component.StyledDocumentUpdater;
-import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
-import com.technophobia.substeps.ui.component.SubstepsIcon;
 import com.technophobia.substeps.ui.component.TextModelFragmentFactory;
-import com.technophobia.substeps.ui.event.ClickOnStyledTextLineMouseListener;
-import com.technophobia.substeps.ui.model.DocumentHighlight;
-import com.technophobia.substeps.ui.model.IconHighlight;
-import com.technophobia.substeps.ui.model.StyledDocument;
-import com.technophobia.substeps.ui.model.TextHighlight;
+import com.technophobia.substeps.ui.highlight.TextChangedToDocumentUpdater;
+import com.technophobia.substeps.ui.results.StandardTestResultsView;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
 
 public class StyledTextRunnerView implements RunnerView {
 
-    protected static final RGB WHITE = new RGB(255, 255, 255);
-    protected static final RGB GREY = new RGB(128, 128, 128);
-    protected static final int IMAGE_HEIGHT = 10;
-    protected static final int IMAGE_WIDTH = 10;
-
-    private StyledText textComponent;
+    private StandardTestResultsView resultsView;
     private StyledText errorComponent;
-    private PaintObjectListener paintIconsListener;
-    private Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer;
-    private Callback2<IProject, String> jumpToLineInEditorCallback;
 
-    private List<HierarchicalIconContainer> icons;
-    private IProject currentProject;
+    private ViewForm topPanel;
+    private ViewForm bottomPanel;
 
-    private final StyledDocumentUpdater styledDocumentUpdater;
-    private final SubstepsIconProvider iconProvider;
-    private final ColourManager colourManager;
-    private final IWorkbenchPartSite site;
     private SashForm sash;
+    private final IWorkbenchPartSite site;
+    private final SubstepsIconProvider iconProvider;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider,
             final IWorkbenchPartSite site) {
-        this.colourManager = colourManager;
         this.iconProvider = iconProvider;
         this.site = site;
-        this.icons = new ArrayList<HierarchicalIconContainer>();
-        this.currentProject = null;
-
-        this.styledDocumentUpdater = updateTextComponentCallback();
+        this.resultsView = createTestResultsView(site, iconProvider, colourManager, errorViewCallback());
     }
 
 
@@ -84,58 +52,26 @@ public class StyledTextRunnerView implements RunnerView {
 
         this.sash = createComposite(parent);
 
-        this.textComponent = createTextComponent(sash);
-        this.errorComponent = createErrorComponent(sash);
-        sash.setMaximizedControl(textComponent);
+        this.topPanel = createPanel(sash);
+        this.bottomPanel = createPanel(sash);
+        this.errorComponent = createErrorComponent(bottomPanel);
+        initialiseTestResultsView(topPanel);
+
+        sash.setMaximizedControl(topPanel);
 
         final IToolBarManager toolBarManager = ((IViewSite) site).getActionBars().getToolBarManager();
-        toolBarManager.add(new ShowErrorsAction(showErrorComponent(), hideErrorComponent(), iconProvider));
-        // final Button button = new Button(composite, SWT.TOGGLE);
-
-        this.paintIconsListener = new PaintRenderedTextListener(iconProvider, supplyIcons());
-        this.documentHighlightToStyleRangeTransformer = initDocumentHighlightToStyleRangeTransformer(colourManager);
-        this.jumpToLineInEditorCallback = new JumpToEditorLineCallback(site);
-
-        // textComponent.setAlwaysShowScrollBars(true);
-        final Font font = new Font(sash.getDisplay(), sash.getFont().getFontData()[0].name, 10, SWT.NORMAL);
-        textComponent.setFont(font);
-        textComponent.setLineSpacing(5);
-        textComponent.setEditable(false);
-
-        textComponent.addMouseListener(new ClickOnStyledTextLineMouseListener(doJumpToEditorCallback()));
-        textComponent.addPaintObjectListener(paintIconsListener);
-
-    }
-
-
-    private Callback showErrorComponent() {
-        return new Callback() {
-            @Override
-            public void doCallback() {
-                sash.setMaximizedControl(null);
-            }
-        };
-    }
-
-
-    private Callback hideErrorComponent() {
-        return new Callback() {
-            @Override
-            public void doCallback() {
-                sash.setMaximizedControl(textComponent);
-            }
-        };
+        toolBarManager.add(new ShowErrorsAction(setMaximisedControlOnSashCallback(null),
+                setMaximisedControlOnSashCallback(topPanel), iconProvider));
     }
 
 
     @Override
     public void dispose() {
-        textComponent.removePaintObjectListener(paintIconsListener);
-        textComponent.dispose();
-        textComponent = null;
+        resultsView.dispose();
+        resultsView = null;
 
-        icons.clear();
-        this.currentProject = null;
+        topPanel.dispose();
+        bottomPanel.dispose();
     }
 
 
@@ -143,7 +79,7 @@ public class StyledTextRunnerView implements RunnerView {
     public SubstepsTestExecutionReporter executionReporter() {
         final ListDelegateHierarchicalTextCollection textCollection = new ListDelegateHierarchicalTextCollection();
         final TextChangedToDocumentUpdater stateChangeHighlighter = new TextChangedToDocumentUpdater(
-                styledDocumentUpdater);
+                resultsView.documentUpdater());
         final TextModelFragmentFactory textModelFragmentFactory = new TextModelFragmentFactory(textCollection,
                 stateChangeHighlighter);
         return new StyledDocumentSubstepsTextExecutionReporter(textCollection, textModelFragmentFactory,
@@ -151,171 +87,65 @@ public class StyledTextRunnerView implements RunnerView {
     }
 
 
-    protected StyledText createTextComponent(final Composite parent) {
-        final StyledText styledText = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
-        // styledText.setBackground(colourManager.getColor(new RGB(0, 0, 0)));
-        // styledText.setLayoutData(styledTextLayoutData(true));
-        // styledText.setLayout(new GridLayout(1, false));
-        // styledText.setFont(parent.getFont());
-        return styledText;
+    protected ViewForm createPanel(final Composite parent) {
+        final ViewForm viewForm = new ViewForm(parent, SWT.NONE);
+        viewForm.setTopLeft(empty(viewForm));
+        return viewForm;
     }
 
 
-    protected StyledText createErrorComponent(final Composite parent) {
-        final StyledText styledText = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
-        // styledText.setBackground(colourManager.getColor(new RGB(255, 0, 0)));
-        // styledText.setLayoutData(styledTextLayoutData(false));
-        // styledText.setLayout(new GridLayout(1, false));
-        // styledText.setFont(parent.getFont());
-        return styledText;
+    protected SashForm createComposite(final Composite parent) {
+        return new SashForm(parent, SWT.VERTICAL | SWT.NO_SCROLL);
     }
 
 
-    protected Object styledTextLayoutData(final boolean grabExcessVerticalSpace) {
-        final GridData layoutData = new GridData(GridData.FILL, grabExcessVerticalSpace ? GridData.FILL : 0, true,
-                grabExcessVerticalSpace);
-        // layoutData.grabExcessVerticalSpace = grabExcessVerticalSpace;
-        return layoutData;
+    protected StandardTestResultsView createTestResultsView(final IWorkbenchPartSite site,
+            final SubstepsIconProvider iconProvider, final ColourManager colourManager,
+            final Callback1<String> errorViewCallback) {
+        return new StandardTestResultsView(site, iconProvider, colourManager, errorViewCallback);
     }
 
 
-    protected void resetTextTo(final StyledDocument styledDocument) {
-        setTextTo(styledDocument.getText());
-
-        updateStyleRangesTo(styledDocument);
+    protected void initialiseTestResultsView(final ViewForm parent) {
+        resultsView.initialise(parent);
+        parent.setContent(resultsView.getControl());
     }
 
 
-    protected void clearText() {
-        setTextTo("");
+    protected StyledText createErrorComponent(final ViewForm parent) {
+        final StyledText text = new StyledText(parent, SWT.NONE);
+        parent.setContent(text);
+        return text;
     }
 
 
-    protected void updateStyleRangesTo(final StyledDocument styledDocument) {
-        final int lineCount = textComponent.getLineCount();
-        icons = new ArrayList<HierarchicalIconContainer>(lineCount);
-        prepareTextStyleRanges(textComponent.getLineCount(), styledDocument.getOffsetToParentOffsetMapping());
-    }
-
-
-    protected void setTextTo(final String text) {
-        textComponent.setStyleRange(null);
-        textComponent.setText(text);
-    }
-
-
-    private void prepareTextStyleRanges(final int lineCount, final Map<Integer, Integer> offsetToParentOffsetMap) {
-        // use positions to determine parent structure - if a positions
-        // offset+length is greater than the next pos, then the former is a
-        // parent
-
-        final Map<Integer, HierarchicalIconContainer> lineNumberToIconMapping = new HashMap<Integer, HierarchicalIconContainer>();
-
-        for (int i = 1; i < lineCount; i++) {
-            final int offset = textComponent.getOffsetAtLine(i);
-
-            final Integer parentOffset = offsetToParentOffsetMap.get(Integer.valueOf(offset));
-            final HierarchicalIconContainer parentContainer = parentOffset != null ? lineNumberToIconMapping
-                    .get(parentOffset) : null;
-
-            textComponent.replaceTextRange(offset, 1, "\uFFFC");
-
-            createUnprocessedTextHighlight(i, offset);
-            createUnprocessedIconHighlight(i, offset, parentContainer, lineNumberToIconMapping);
-        }
-    }
-
-
-    private void createUnprocessedTextHighlight(final int line, final int offset) {
-        final int length = textComponent.getLine(line).length() - 1;
-        // Note the +1 for the offset. The offset is for the line, and position
-        // 0 of the line is reserved for the image StyleRange. By not using +1
-        // here, you will
-        // overwrite the lines image
-        addHighlight(new TextHighlight(offset + 1, length, GREY));
-    }
-
-
-    private void createUnprocessedIconHighlight(final int line, final int offset,
-            final HierarchicalIconContainer parentContainer,
-            final Map<Integer, HierarchicalIconContainer> lineNumberToTextMapping) {
-        final IconHighlight icon = new IconHighlight(offset, 1, SubstepsIcon.SubstepNoResult, IMAGE_WIDTH, IMAGE_HEIGHT);
-        addHighlight(icon);
-
-        final HierarchicalIconContainer iconContainer = createIconContainer(parentContainer, icon);
-        icons.add(iconContainer);
-        lineNumberToTextMapping.put(Integer.valueOf(offset), iconContainer);
-    }
-
-
-    protected HierarchicalIconContainer createIconContainer(final HierarchicalIconContainer parentContainer,
-            final IconHighlight icon) {
-        return new HierarchicalIconContainer(true, icon, parentContainer);
-    }
-
-
-    protected Transformer<DocumentHighlight, StyleRange> documentHighlightToStyleRangeTransformer() {
-        return documentHighlightToStyleRangeTransformer;
-    }
-
-
-    protected void addHighlight(final DocumentHighlight highlight) {
-        final StyleRange styleRange = documentHighlightToStyleRangeTransformer.from(highlight);
-
-        // We never want the style range to be longer than the document,
-        // otherwise an IllegalArgumentException is thrown. Instead,
-        // make sure the style range is trimmed to the length of the document if
-        // required
-        styleRange.length = Math.min(styleRange.length, textComponent.getCharCount() - styleRange.start);
-        textComponent.setStyleRange(styleRange);
-    }
-
-
-    protected Transformer<DocumentHighlight, StyleRange> initDocumentHighlightToStyleRangeTransformer(
-            final ColourManager colourManager) {
-        return new InstanceAwareDocumentHighlightToStyleRangeTransformer(colourManager);
-    }
-
-
-    protected void updateIconAt(final int offset, final HighlightEvent highlightEvent) {
-
-        final int line = textComponent.getLineAtOffset(offset);
-
-        // we don't update line 0 - the feature line. As such, the offset/image
-        // list starts at line 1, so subtract 1 from this accordingly
-        if (line > 0) {
-            updateIconAtLine(line - 1, highlightEvent);
-        }
-    }
-
-
-    protected void updateIconAtLine(final int line, final HighlightEvent highlightEvent) {
-        if (HighlightEvent.TestPassed.equals(highlightEvent)) {
-            icons.get(line).mutateIconTo(SubstepsIcon.SubstepPassed);
-        } else if (HighlightEvent.TestFailed.equals(highlightEvent)) {
-            icons.get(line).mutateIconTo(SubstepsIcon.SubstepFailed);
-        } else if (HighlightEvent.NoChange.equals(highlightEvent)) {
-            // No-op
-        } else {
-            FeatureRunnerPlugin.log(IStatus.WARNING, "Unexpected highlight event type");
-        }
-    }
-
-
-    protected void doIconOperation(final int offset, final int length,
-            final Callback1<HierarchicalIconContainer> callback) {
-        final int end = offset + length;
-        for (final HierarchicalIconContainer iconContainer : icons) {
-            final int iconOffset = iconContainer.getOffset();
-            if (iconOffset >= offset && iconOffset < end) {
-                callback.callback(iconContainer);
+    private Callback setMaximisedControlOnSashCallback(final Control control) {
+        return new Callback() {
+            @Override
+            public void doCallback() {
+                sash.setMaximizedControl(control);
             }
-        }
+        };
     }
 
 
-    protected void doIconOperation(final int offset, final Callback1<HierarchicalIconContainer> callback) {
-        doIconOperation(offset, Integer.MAX_VALUE - offset, callback);
+    private Control empty(final Composite parent) {
+        final Composite empty = new Composite(parent, SWT.NONE);
+        empty.setLayout(new Layout() {
+            @Override
+            protected Point computeSize(final Composite composite, final int wHint, final int hHint,
+                    final boolean flushCache) {
+                return new Point(1, 1); // (0, 0) does not work with
+                                        // super-intelligent ViewForm
+            }
+
+
+            @Override
+            protected void layout(final Composite composite, final boolean flushCache) {
+                // No-op
+            }
+        });
+        return empty;
     }
 
 
@@ -323,87 +153,18 @@ public class StyledTextRunnerView implements RunnerView {
         return new Callback1<IProject>() {
             @Override
             public void callback(final IProject project) {
-                StyledTextRunnerView.this.currentProject = project;
+                StyledTextRunnerView.this.resultsView.updateCurrentProject(project);
             }
         };
     }
 
 
-    private Callback1<String> doJumpToEditorCallback() {
+    private Callback1<String> errorViewCallback() {
         return new Callback1<String>() {
             @Override
-            public void callback(final String line) {
-                jumpToLineInEditorCallback.doCallback(currentProject, line);
+            public void callback(final String t) {
+                errorComponent.setText(t);
             }
         };
-    }
-
-
-    private StyledDocumentUpdater updateTextComponentCallback() {
-        return new StyledDocumentUpdater() {
-
-            @Override
-            public void highlightChanged(final HighlightEvent highlightEvent, final DocumentHighlight highlight) {
-                textComponent.getDisplay().asyncExec(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        addHighlight(highlight);
-
-                        updateIconAt(highlight.getOffset(), highlightEvent);
-                    }
-                });
-            }
-
-
-            @Override
-            public void tearDown() {
-                textComponent.getDisplay().asyncExec(new Runnable() {
-                    @Override
-                    public void run() {
-                        clearText();
-                    }
-                });
-
-            }
-
-
-            @Override
-            public void documentChanged(final StyledDocument document) {
-                textComponent.getDisplay().asyncExec(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        resetTextTo(document);
-                    }
-                });
-            }
-        };
-
-    }
-
-
-    private Supplier<List<HierarchicalIconContainer>> supplyIcons() {
-        return new Supplier<List<HierarchicalIconContainer>>() {
-
-            @Override
-            public List<HierarchicalIconContainer> get() {
-                return icons;
-            }
-        };
-    }
-
-
-    private SashForm createComposite(final Composite parent) {
-        final SashForm sashForm = new SashForm(parent, SWT.VERTICAL | SWT.NO_SCROLL);
-        // sashForm.setBackground(colourManager.getColor(new RGB(0, 255, 0)));
-        // final GridLayout layout = new GridLayout(1, false);
-        // layout.marginWidth = 0;
-        // layout.marginHeight = 0;
-        // composite.setLayout(layout);
-        // final GridData gridData = new GridData(GridData.FILL, GridData.FILL,
-        // true, true);
-        // composite.setLayoutData(gridData);
-        return sashForm;
     }
 }

@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.model;
 
 import com.technophobia.substeps.ui.component.SubstepsIcon;
 import com.technophobia.substeps.ui.model.IconHighlight;

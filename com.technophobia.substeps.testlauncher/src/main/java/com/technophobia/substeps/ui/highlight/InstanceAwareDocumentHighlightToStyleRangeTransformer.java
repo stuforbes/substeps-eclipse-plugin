@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.highlight;
 
 import java.util.Collections;
 import java.util.HashMap;

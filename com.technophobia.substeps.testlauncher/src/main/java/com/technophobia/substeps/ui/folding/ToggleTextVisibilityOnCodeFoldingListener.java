@@ -1,4 +1,4 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.folding;
 
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.Annotation;

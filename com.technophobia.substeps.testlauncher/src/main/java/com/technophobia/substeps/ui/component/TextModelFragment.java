@@ -1,7 +1,7 @@
 package com.technophobia.substeps.ui.component;
 
 import com.technophobia.eclipse.transformer.Callback1;
-import com.technophobia.substeps.ui.TextHighlighter;
+import com.technophobia.substeps.ui.highlight.TextHighlighter;
 
 public class TextModelFragment implements HierarchicalTextStructure {
 

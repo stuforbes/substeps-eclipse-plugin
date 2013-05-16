@@ -1,6 +1,7 @@
-package com.technophobia.substeps.ui;
+package com.technophobia.substeps.ui.folding;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.substeps.ui.model.HierarchicalIconContainer;
 
 public class ExpandTextCallback implements Callback1<HierarchicalIconContainer> {
 

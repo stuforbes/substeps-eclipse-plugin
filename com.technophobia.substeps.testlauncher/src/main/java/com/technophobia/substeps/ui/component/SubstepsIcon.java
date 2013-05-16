@@ -4,6 +4,7 @@ public enum SubstepsIcon implements com.technophobia.substeps.junit.ui.SubstepsI
     SubstepPassed("eview16/tick.gif"), //
     SubstepFailed("eview16/cross.gif"), //
     SubstepNoResult("eview16/no_result.gif"), //
+    SubstepViewError("eview16/stack.gif"), //
 
     ActionShowErrors("eview16/substeps.gif");
 

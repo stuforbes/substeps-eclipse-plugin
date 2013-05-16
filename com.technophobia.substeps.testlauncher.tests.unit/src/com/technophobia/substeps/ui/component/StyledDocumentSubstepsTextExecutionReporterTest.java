@@ -17,7 +17,7 @@ import org.junit.runner.RunWith;
 import com.technophobia.eclipse.transformer.Callback1;
 import com.technophobia.eclipse.transformer.Locator;
 import com.technophobia.substeps.supplier.Predicate;
-import com.technophobia.substeps.ui.TextHighlighter;
+import com.technophobia.substeps.ui.highlight.TextHighlighter;
 import com.technophobia.substeps.ui.session.SubstepsTestExecutionReporter;
 
 @RunWith(JMock.class)

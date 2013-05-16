@@ -12,8 +12,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.technophobia.eclipse.transformer.Callback1;
-import com.technophobia.substeps.ui.TextHighlighter;
 import com.technophobia.substeps.ui.component.TextModelFragment.TextState;
+import com.technophobia.substeps.ui.highlight.TextHighlighter;
 
 @RunWith(JMock.class)
 public class TextModelFragmentTest {
