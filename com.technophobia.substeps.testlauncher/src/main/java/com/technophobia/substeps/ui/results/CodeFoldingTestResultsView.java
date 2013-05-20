@@ -30,11 +30,13 @@ import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.DefaultMarkerAnnotationAccess;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.eclipse.transformer.Locator;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.supplier.Transformer;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
+import com.technophobia.substeps.ui.component.TextModelFragment;
 import com.technophobia.substeps.ui.folding.CollapseTextCallback;
 import com.technophobia.substeps.ui.folding.CompositeVisiblityToggle;
 import com.technophobia.substeps.ui.folding.ExpandTextCallback;
@@ -68,8 +70,9 @@ public class CodeFoldingTestResultsView extends StandardTestResultsView {
 
 
     public CodeFoldingTestResultsView(final IWorkbenchPartSite site, final SubstepsIconProvider iconProvider,
-            final ColourManager colourManager, final Callback1<String> errorViewCallback) {
-        super(site, iconProvider, colourManager, errorViewCallback);
+            final ColourManager colourManager, final Callback1<String> errorViewCallback,
+            final Locator<TextModelFragment, Integer> textModelFragmentAtOffsetLocator) {
+        super(site, iconProvider, colourManager, errorViewCallback, textModelFragmentAtOffsetLocator);
         this.highlights = new HashMap<Integer, DocumentHighlight>();
         this.masterToProjectedOffsetTransformer = initMasterToProjectedOffsetTransformer();
         this.oldAnnotationsByMasterOffset = new HashMap<Integer, Annotation>();

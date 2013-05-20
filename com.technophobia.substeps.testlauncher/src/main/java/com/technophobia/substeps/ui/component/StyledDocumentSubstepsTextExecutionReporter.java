@@ -89,10 +89,22 @@ public class StyledDocumentSubstepsTextExecutionReporter implements SubstepsTest
 
 
     @Override
-    public void nodeFailed(final String id) {
+    public void nodeFailed(final String id, final String expected, final String actual) {
         final TextModelFragment textFragment = findNodeWithIdOrNull(id);
         if (textFragment != null) {
-            textFragment.markFailed();
+            textFragment.markFailed(expected, actual);
+        } else {
+            FeatureRunnerPlugin.log(IStatus.WARNING, "Could not mark node with id " + id
+                    + " as complete, as it could not be located");
+        }
+    }
+
+
+    @Override
+    public void nodeError(final String id, final String trace) {
+        final TextModelFragment textFragment = findNodeWithIdOrNull(id);
+        if (textFragment != null) {
+            textFragment.markError(trace);
         } else {
             FeatureRunnerPlugin.log(IStatus.WARNING, "Could not mark node with id " + id
                     + " as complete, as it could not be located");

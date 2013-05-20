@@ -18,6 +18,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.IWorkbenchPartSite;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.eclipse.transformer.Locator;
 import com.technophobia.eclipse.ui.Disposable;
 import com.technophobia.substeps.FeatureRunnerPlugin;
 import com.technophobia.substeps.colour.ColourManager;
@@ -29,7 +30,9 @@ import com.technophobia.substeps.supplier.Transformer;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater;
 import com.technophobia.substeps.ui.component.StyledDocumentUpdater.HighlightEvent;
 import com.technophobia.substeps.ui.component.SubstepsIcon;
+import com.technophobia.substeps.ui.component.TextModelFragment;
 import com.technophobia.substeps.ui.event.ClickOnStyledTextLineMouseListener;
+import com.technophobia.substeps.ui.event.LineClickHandler;
 import com.technophobia.substeps.ui.event.ShowInErrorPaneCallback;
 import com.technophobia.substeps.ui.highlight.InstanceAwareDocumentHighlightToStyleRangeTransformer;
 import com.technophobia.substeps.ui.model.DocumentHighlight;
@@ -57,12 +60,15 @@ public class StandardTestResultsView implements TestResultsView, Disposable {
     private List<HierarchicalIconContainer> icons;
     private final ColourManager colourManager;
     private final Callback1<String> errorViewCallback;
+    private final Locator<TextModelFragment, Integer> textModelFragmentAtOffsetLocator;
 
 
     public StandardTestResultsView(final IWorkbenchPartSite site, final SubstepsIconProvider iconProvider,
-            final ColourManager colourManager, final Callback1<String> errorViewCallback) {
+            final ColourManager colourManager, final Callback1<String> errorViewCallback,
+            final Locator<TextModelFragment, Integer> textModelFragmentAtOffsetLocator) {
         this.colourManager = colourManager;
         this.errorViewCallback = errorViewCallback;
+        this.textModelFragmentAtOffsetLocator = textModelFragmentAtOffsetLocator;
         this.icons = new ArrayList<HierarchicalIconContainer>();
         this.documentUpdater = updateTextComponentCallback();
         this.jumpToLineInEditorCallback = new JumpToEditorLineCallback(site);
@@ -83,7 +89,7 @@ public class StandardTestResultsView implements TestResultsView, Disposable {
 
         textComponent.addMouseListener(new ClickOnStyledTextLineMouseListener(doJumpToEditorCallback()));
         textComponent.addMouseListener(new ClickOnStyledTextLineMouseListener(new ShowInErrorPaneCallback(
-                errorViewCallback)));
+                errorViewCallback, textModelFragmentAtOffsetLocator)));
         textComponent.addPaintObjectListener(paintIconsListener);
 
     }
@@ -243,11 +249,12 @@ public class StandardTestResultsView implements TestResultsView, Disposable {
     }
 
 
-    private Callback1<String> doJumpToEditorCallback() {
-        return new Callback1<String>() {
+    private LineClickHandler doJumpToEditorCallback() {
+        return new LineClickHandler() {
             @Override
-            public void callback(final String line) {
+            public void onLineClick(final int offset, final String line) {
                 jumpToLineInEditorCallback.doCallback(currentProject, line);
+
             }
         };
     }

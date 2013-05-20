@@ -84,7 +84,11 @@ public class UpdateViewWithSessionListener implements SubstepsSessionListener {
     @Override
     public void testFailed(final SubstepsTestElement testElement, final Status status, final String trace,
             final String expected, final String actual) {
-        executionReporter.nodeFailed(testElement.getId());
+        if (Status.FAILURE.equals(status)) {
+            executionReporter.nodeFailed(testElement.getId(), expected, actual);
+        } else {
+            executionReporter.nodeError(testElement.getId(), trace);
+        }
     }
 
 

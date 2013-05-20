@@ -20,7 +20,8 @@ public class CodeFoldingStyleTextRunnerView extends StyledTextRunnerView {
     protected StandardTestResultsView createTestResultsView(final IWorkbenchPartSite site,
             final SubstepsIconProvider iconProvider, final ColourManager colourManager,
             final Callback1<String> errorViewCallback) {
-        return new CodeFoldingTestResultsView(site, iconProvider, colourManager, errorViewCallback);
+        return new CodeFoldingTestResultsView(site, iconProvider, colourManager, errorViewCallback,
+                textModelFragmentAtOffsetLocator());
     }
 
 }

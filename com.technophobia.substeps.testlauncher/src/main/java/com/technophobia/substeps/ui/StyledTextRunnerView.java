@@ -1,6 +1,7 @@
 package com.technophobia.substeps.ui;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
@@ -14,13 +15,18 @@ import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchPartSite;
 
 import com.technophobia.eclipse.transformer.Callback1;
+import com.technophobia.eclipse.transformer.Locator;
 import com.technophobia.eclipse.transformer.ProjectByNameLocator;
 import com.technophobia.substeps.colour.ColourManager;
 import com.technophobia.substeps.junit.ui.SubstepsIconProvider;
 import com.technophobia.substeps.supplier.Callback;
+import com.technophobia.substeps.supplier.Predicate;
 import com.technophobia.substeps.ui.action.ShowErrorsAction;
+import com.technophobia.substeps.ui.component.HierarchicalTextCollection;
+import com.technophobia.substeps.ui.component.HierarchicalTextStructure;
 import com.technophobia.substeps.ui.component.ListDelegateHierarchicalTextCollection;
 import com.technophobia.substeps.ui.component.StyledDocumentSubstepsTextExecutionReporter;
+import com.technophobia.substeps.ui.component.TextModelFragment;
 import com.technophobia.substeps.ui.component.TextModelFragmentFactory;
 import com.technophobia.substeps.ui.highlight.TextChangedToDocumentUpdater;
 import com.technophobia.substeps.ui.results.StandardTestResultsView;
@@ -33,10 +39,12 @@ public class StyledTextRunnerView implements RunnerView {
 
     private ViewForm topPanel;
     private ViewForm bottomPanel;
+    private IAction showErrorsAction;
 
     private SashForm sash;
     private final IWorkbenchPartSite site;
     private final SubstepsIconProvider iconProvider;
+    private final HierarchicalTextCollection textCollection;
 
 
     public StyledTextRunnerView(final ColourManager colourManager, final SubstepsIconProvider iconProvider,
@@ -44,6 +52,7 @@ public class StyledTextRunnerView implements RunnerView {
         this.iconProvider = iconProvider;
         this.site = site;
         this.resultsView = createTestResultsView(site, iconProvider, colourManager, errorViewCallback());
+        this.textCollection = new ListDelegateHierarchicalTextCollection();
     }
 
 
@@ -55,13 +64,14 @@ public class StyledTextRunnerView implements RunnerView {
         this.topPanel = createPanel(sash);
         this.bottomPanel = createPanel(sash);
         this.errorComponent = createErrorComponent(bottomPanel);
+        this.showErrorsAction = new ShowErrorsAction(setMaximisedControlOnSashCallback(null),
+                setMaximisedControlOnSashCallback(topPanel), iconProvider);
         initialiseTestResultsView(topPanel);
 
         sash.setMaximizedControl(topPanel);
 
         final IToolBarManager toolBarManager = ((IViewSite) site).getActionBars().getToolBarManager();
-        toolBarManager.add(new ShowErrorsAction(setMaximisedControlOnSashCallback(null),
-                setMaximisedControlOnSashCallback(topPanel), iconProvider));
+        toolBarManager.add(showErrorsAction);
     }
 
 
@@ -77,7 +87,6 @@ public class StyledTextRunnerView implements RunnerView {
 
     @Override
     public SubstepsTestExecutionReporter executionReporter() {
-        final ListDelegateHierarchicalTextCollection textCollection = new ListDelegateHierarchicalTextCollection();
         final TextChangedToDocumentUpdater stateChangeHighlighter = new TextChangedToDocumentUpdater(
                 resultsView.documentUpdater());
         final TextModelFragmentFactory textModelFragmentFactory = new TextModelFragmentFactory(textCollection,
@@ -102,7 +111,25 @@ public class StyledTextRunnerView implements RunnerView {
     protected StandardTestResultsView createTestResultsView(final IWorkbenchPartSite site,
             final SubstepsIconProvider iconProvider, final ColourManager colourManager,
             final Callback1<String> errorViewCallback) {
-        return new StandardTestResultsView(site, iconProvider, colourManager, errorViewCallback);
+        return new StandardTestResultsView(site, iconProvider, colourManager, errorViewCallback,
+                textModelFragmentAtOffsetLocator());
+    }
+
+
+    protected Locator<TextModelFragment, Integer> textModelFragmentAtOffsetLocator() {
+        return new Locator<TextModelFragment, Integer>() {
+
+            @Override
+            public TextModelFragment one(final Integer offset) {
+                return (TextModelFragment) textCollection.findFirstOrNull(new Predicate<HierarchicalTextStructure>() {
+
+                    @Override
+                    public boolean forModel(final HierarchicalTextStructure t) {
+                        return offset.intValue() >= t.offset() && offset.intValue() < (t.offset() + t.length());
+                    }
+                });
+            }
+        };
     }
 
 
@@ -163,6 +190,10 @@ public class StyledTextRunnerView implements RunnerView {
         return new Callback1<String>() {
             @Override
             public void callback(final String t) {
+                if (!showErrorsAction.isChecked()) {
+                    showErrorsAction.setChecked(true);
+                    showErrorsAction.run();
+                }
                 errorComponent.setText(t);
             }
         };

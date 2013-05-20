@@ -5,15 +5,13 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Point;
 
-import com.technophobia.eclipse.transformer.Callback1;
-
 public class ClickOnStyledTextLineMouseListener implements MouseListener {
 
-    private final Callback1<String> onLineClickCallback;
+    private final LineClickHandler lineClickHandler;
 
 
-    public ClickOnStyledTextLineMouseListener(final Callback1<String> onLineClickCallback) {
-        this.onLineClickCallback = onLineClickCallback;
+    public ClickOnStyledTextLineMouseListener(final LineClickHandler lineClickHandler) {
+        this.lineClickHandler = lineClickHandler;
     }
 
 
@@ -25,7 +23,7 @@ public class ClickOnStyledTextLineMouseListener implements MouseListener {
             final String line = styledText.getLine(styledText.getLineAtOffset(offset));
             if (line != null && line.length() > 0) {
                 // 1st character is the icon character
-                onLineClickCallback.callback(line.substring(1).trim());
+                lineClickHandler.onLineClick(offset, line.substring(1).trim());
             }
         }
     }

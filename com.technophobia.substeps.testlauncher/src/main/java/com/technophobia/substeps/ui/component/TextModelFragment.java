@@ -28,6 +28,9 @@ public class TextModelFragment implements HierarchicalTextStructure {
     private int numChildrenPassed;
     private final TextHighlighter stateChangedHighlighter;
 
+    private FailureFragment failure;
+    private ErrorFragment error;
+
 
     public static TextModelFragment createRootFragment(final String id, final String text, final int startPos,
             final int lineNumber, final TextHighlighter stateChangeHighlighter) {
@@ -136,18 +139,27 @@ public class TextModelFragment implements HierarchicalTextStructure {
     }
 
 
-    public void markFailed() {
-        // only do this for leaf nodes - parents can sort themselves out from
-        // that
-        // if (numChildren == 0) {
+    public void markFailed(final String expected, final String actual) {
         updateStateTo(TextState.Failed);
+        failure = new FailureFragment(expected, actual);
         doToAncestry(new Callback1<TextModelFragment>() {
             @Override
             public void callback(final TextModelFragment t) {
                 t.updateStateTo(TextState.SubNodeFailed);
             }
         });
-        // }
+    }
+
+
+    public void markError(final String trace) {
+        updateStateTo(TextState.Failed);
+        error = new ErrorFragment(trace);
+        doToAncestry(new Callback1<TextModelFragment>() {
+            @Override
+            public void callback(final TextModelFragment t) {
+                t.updateStateTo(TextState.SubNodeFailed);
+            }
+        });
     }
 
 
@@ -185,14 +197,40 @@ public class TextModelFragment implements HierarchicalTextStructure {
     }
 
 
+    public FailureFragment failureOrNull() {
+        return failure;
+    }
+
+
+    public ErrorFragment errorOrNull() {
+        return error;
+    }
+
+
+    public boolean isFailure() {
+        return failure != null;
+    }
+
+
+    public boolean isError() {
+        return error != null;
+    }
+
+
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
         result = prime * result + depth;
+        result = prime * result + ((error == null) ? 0 : error.hashCode());
+        result = prime * result + ((failure == null) ? 0 : failure.hashCode());
         result = prime * result + ((id == null) ? 0 : id.hashCode());
+        result = prime * result + lineNumber;
+        result = prime * result + numChildren;
+        result = prime * result + numChildrenPassed;
         result = prime * result + ((parentTextFragment == null) ? 0 : parentTextFragment.hashCode());
         result = prime * result + startPos;
+        result = prime * result + ((stateChangedHighlighter == null) ? 0 : stateChangedHighlighter.hashCode());
         result = prime * result + ((text == null) ? 0 : text.hashCode());
         result = prime * result + ((textState == null) ? 0 : textState.hashCode());
         return result;
@@ -210,10 +248,26 @@ public class TextModelFragment implements HierarchicalTextStructure {
         final TextModelFragment other = (TextModelFragment) obj;
         if (depth != other.depth)
             return false;
+        if (error == null) {
+            if (other.error != null)
+                return false;
+        } else if (!error.equals(other.error))
+            return false;
+        if (failure == null) {
+            if (other.failure != null)
+                return false;
+        } else if (!failure.equals(other.failure))
+            return false;
         if (id == null) {
             if (other.id != null)
                 return false;
         } else if (!id.equals(other.id))
+            return false;
+        if (lineNumber != other.lineNumber)
+            return false;
+        if (numChildren != other.numChildren)
+            return false;
+        if (numChildrenPassed != other.numChildrenPassed)
             return false;
         if (parentTextFragment == null) {
             if (other.parentTextFragment != null)
@@ -221,6 +275,11 @@ public class TextModelFragment implements HierarchicalTextStructure {
         } else if (!parentTextFragment.equals(other.parentTextFragment))
             return false;
         if (startPos != other.startPos)
+            return false;
+        if (stateChangedHighlighter == null) {
+            if (other.stateChangedHighlighter != null)
+                return false;
+        } else if (!stateChangedHighlighter.equals(other.stateChangedHighlighter))
             return false;
         if (text == null) {
             if (other.text != null)

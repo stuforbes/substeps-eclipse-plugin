@@ -22,7 +22,10 @@ public interface SubstepsTestExecutionReporter {
     void nodeCompleted(String id);
 
 
-    void nodeFailed(String id);
+    void nodeFailed(String id, String expected, String actual);
+
+
+    void nodeError(String id, String trace);
 
 
     void resetExecutionState();

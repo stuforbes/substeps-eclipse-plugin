@@ -108,7 +108,7 @@ public class TextModelFragmentTest {
 
 
     @Test
-    public void markAsFailedUpdatesTextStateAccordingly() {
+    public void markAsFailedUpdatesTextStateAndFailureContextAccordingly() {
         final TextModelFragment fragment = TextModelFragment.createRootFragment("1", "text", 0, 0, textHighlighter);
 
         context.checking(new Expectations() {
@@ -118,8 +118,28 @@ public class TextModelFragmentTest {
         });
 
         assertThat(fragment.textState(), is(TextState.Unprocessed));
-        fragment.markFailed();
+        fragment.markFailed("expected", "actual");
+
         assertThat(fragment.textState(), is(TextState.Failed));
+        assertThat(fragment.failureOrNull(), is(new FailureFragment("expected", "actual")));
+    }
+
+
+    @Test
+    public void markAsErrorUpdatesTextStateAndErrorContextAccordingly() {
+        final TextModelFragment fragment = TextModelFragment.createRootFragment("1", "text", 0, 0, textHighlighter);
+
+        context.checking(new Expectations() {
+            {
+                oneOf(textHighlighter).highlight(fragment);
+            }
+        });
+
+        assertThat(fragment.textState(), is(TextState.Unprocessed));
+        fragment.markError("trace");
+
+        assertThat(fragment.textState(), is(TextState.Failed));
+        assertThat(fragment.errorOrNull(), is(new ErrorFragment("trace")));
     }
 
 
@@ -145,7 +165,7 @@ public class TextModelFragmentTest {
         assertThat(grandchild1.textState(), is(TextState.Unprocessed));
         assertThat(grandchild2.textState(), is(TextState.Unprocessed));
 
-        grandchild1.markFailed();
+        grandchild1.markFailed("expected", "actual");
 
         assertThat(root.textState(), is(TextState.SubNodeFailed));
         assertThat(child1.textState(), is(TextState.Unprocessed));
