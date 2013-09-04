@@ -95,6 +95,22 @@
   </extension>
   <extension
  point="org.eclipse.ui.menus">
+     <menuContribution
+           locationURI="popup:com.technophobia.substeps.editor.feature.contextmenu?after=group.find">
+        <command
+              commandId="com.technophobia.substeps.editor.find.dependent.steps"
+              label="Find Usages"
+              style="push">
+        </command>
+     </menuContribution>
+     <menuContribution
+           locationURI="popup:com.technophobia.substeps.editor.feature.contextmenu?after=group.find">
+        <command
+              commandId="com.technophobia.substeps.editor.navigate.to.substep.definition"
+              label="Open Step"
+              style="push">
+        </command>
+     </menuContribution>
 </extension>
   <extension
         point="org.eclipse.ui.bindings">
@@ -119,9 +135,14 @@
           name="Format">
       </command>
     <command
-          defaultHandler="com.technophobia.substeps.document.navigation.JumpToSubStepDefinitionHandler"
+          defaultHandler="com.technophobia.substeps.command.document.navigation.JumpToSubStepDefinitionHandler"
           id="com.technophobia.substeps.editor.navigate.to.substep.definition"
           name="NavigateToSubstepDefinition">
+    </command>
+    <command
+          defaultHandler="com.technophobia.substeps.command.editor.find.OpenStepDependenciesViewHandler"
+          id="com.technophobia.substeps.editor.find.dependent.steps"
+          name="OpenStepDependenciesView">
     </command>
   </extension>
   <extension

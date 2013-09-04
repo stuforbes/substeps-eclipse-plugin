@@ -27,6 +27,7 @@ import org.eclipse.jface.text.contentassist.IContentAssistProcessor;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IPartService;
@@ -73,6 +74,8 @@ import com.technophobia.substeps.supplier.Transformer;
 public class FeatureEditor extends TextEditor implements FormattableEditorPart, IPartListener2 {
 
     private static final String SUBSTEPS_CONTEXT = "com.technophobia.substeps.editor.SubstepsContext";
+
+    private static final String FEATURE_EDITOR_CONTEXT_MENU_ID = "com.technophobia.substeps.editor.feature.contextmenu";
 
     private final ColourManager colourManager;
     private IContextActivation currentActivateContext;
@@ -235,6 +238,13 @@ public class FeatureEditor extends TextEditor implements FormattableEditorPart, 
 
 
     @Override
+    public void createPartControl(final Composite parent) {
+        // TODO Auto-generated method stub
+        super.createPartControl(parent);
+    }
+
+
+    @Override
     protected void doSetInput(final IEditorInput input) throws CoreException {
         super.doSetInput(input);
 
@@ -255,6 +265,13 @@ public class FeatureEditor extends TextEditor implements FormattableEditorPart, 
 
         partService.addPartListener(this);
 
+    }
+
+
+    @Override
+    protected void initializeEditor() {
+        super.initializeEditor();
+        setEditorContextMenuId(FEATURE_EDITOR_CONTEXT_MENU_ID);
     }
 
 
