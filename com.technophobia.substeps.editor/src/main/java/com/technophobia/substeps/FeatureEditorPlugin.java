@@ -152,10 +152,6 @@ public class FeatureEditorPlugin extends AbstractUIPlugin implements BundleActiv
     public ContextualSuggestionManager getSuggestionManager() {
         if (suggestionManager == null) {
             suggestionManager = new ProvidedSuggestionManager(new ResourceToProjectTransformer());
-
-            // New suggestion providers means syntax should now have changed, re
-            // update it
-            refreshAllProjectSyntaxes();
         }
         return suggestionManager;
     }
@@ -296,6 +292,10 @@ public class FeatureEditorPlugin extends AbstractUIPlugin implements BundleActiv
                 projectSpecificSuggestionProvider);
         projectObserver.addSubstepsFileListener(substepSuggestionProvider);
         suggestions.load(ResourcesPlugin.getWorkspace());
+
+        // New suggestion providers means syntax should now have changed, re
+        // update it
+        refreshAllProjectSyntaxes();
     }
 
 

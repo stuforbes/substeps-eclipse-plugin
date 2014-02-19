@@ -9,6 +9,8 @@ public class SubstepsEditorMessages {
     public static String StepImplementationHoverModel_No_JavaDoc;
     public static String StepImplementationHoverModel_No_JavaDoc_Recommendation;
 
+    public static String ShowDependencesView_No_Step;
+
     static {
         NLS.initializeMessages(BUNDLE_NAME, SubstepsEditorMessages.class);
     }

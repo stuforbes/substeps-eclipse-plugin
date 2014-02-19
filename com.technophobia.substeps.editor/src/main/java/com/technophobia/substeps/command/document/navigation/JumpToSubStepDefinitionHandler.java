@@ -20,85 +20,27 @@ import static com.technophobia.substeps.FeatureEditorPlugin.instance;
 
 import java.util.regex.Pattern;
 
-import org.eclipse.core.commands.AbstractHandler;
-import org.eclipse.core.commands.ExecutionEvent;
-import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.core.resources.IContainer;
-import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.jface.viewers.ISelectionProvider;
-import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.handlers.HandlerUtil;
 
 import com.technophobia.eclipse.transformer.ProjectToJavaProjectTransformer;
 import com.technophobia.substeps.FeatureEditorPlugin;
+import com.technophobia.substeps.command.AbstractSubstepsEditorHandler;
 import com.technophobia.substeps.document.navigation.OpenJavaEditor;
 import com.technophobia.substeps.document.navigation.OpenSubstepsEditor;
-import com.technophobia.substeps.editor.FeatureEditor;
 import com.technophobia.substeps.model.ParentStep;
 import com.technophobia.substeps.model.StepImplementation;
 import com.technophobia.substeps.model.Syntax;
 
-public class JumpToSubStepDefinitionHandler extends AbstractHandler {
+public class JumpToSubStepDefinitionHandler extends AbstractSubstepsEditorHandler {
 
     private static final ProjectToJavaProjectTransformer PROJECT_TRANSFORMER = new ProjectToJavaProjectTransformer();
 
 
     @Override
-    public Object execute(final ExecutionEvent event) throws ExecutionException {
-        final IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
-
-        final IWorkbenchPage page = window.getActivePage();
-
-        // TextEditor implements IEditorPart
-        final IEditorPart activeEditor = page.getActiveEditor();
-
-        final IEditorInput editorInput = activeEditor.getEditorInput();
-
-        final IFile file = (IFile) editorInput.getAdapter(IFile.class);
-
-        final boolean isFeatureFile = file.getFileExtension().toLowerCase().equals("feature");
-        final boolean isSubstepsFile = file.getFileExtension().toLowerCase().equals("substeps");
-
-        if (isFeatureFile || isSubstepsFile) {
-
-            final IContainer container = file.getParent();
-
-            final IProject project = container.getProject();
-
-            final FeatureEditor currentEditor = (FeatureEditor) activeEditor.getAdapter(FeatureEditor.class);
-
-            final IDocument currentDocument = currentEditor.getCurrentDocument();
-
-            final IEditorSite editorSite = activeEditor.getEditorSite();
-
-            if (editorSite != null) {
-                final ISelectionProvider selectionProvider = editorSite.getSelectionProvider();
-
-                if (selectionProvider != null) {
-                    jumpToStepDefinition(page, project, currentDocument, selectionProvider);
-                }
-            }
-        }
-        // Must return null, apparently
-        return null;
-    }
-
-
-    private void jumpToStepDefinition(final IWorkbenchPage page, final IProject project,
-            final IDocument currentDocument, final ISelectionProvider selectionProvider) {
-        final int offset = ((ITextSelection) selectionProvider.getSelection()).getOffset();
-        // Get the line from where we are
-        final String currentLine = getCurrentLine(currentDocument, offset);
-        if (currentLine != null) {
-            instance().info("F3 lookup on line: " + currentLine);
+    protected void doWithLine(final String line, final IProject project, final IWorkbenchPage page) {
+        if (line != null) {
+            instance().info("F3 lookup on line: " + line);
 
             // Set the Syntax from SubstepSuggestionProvider
             final Syntax syntax = FeatureEditorPlugin.instance().syntaxFor(project);
@@ -106,12 +48,12 @@ public class JumpToSubStepDefinitionHandler extends AbstractHandler {
             // We can be finding definitions written in either a Substeps file
             // or an annotated method in a Java class, these correspond to a
             // ParentStep or a StepImplementation in the Syntax respectively.
-            final ParentStep parentStep = findParent(syntax, currentLine);
+            final ParentStep parentStep = findParent(syntax, line);
             if (parentStep != null) {
                 // Open the user defined Substep file.
                 OpenSubstepsEditor.open(page, PROJECT_TRANSFORMER.from(project), parentStep);
             } else {
-                final StepImplementation stepImplementation = findStep(syntax, currentLine);
+                final StepImplementation stepImplementation = findStep(syntax, line);
                 if (stepImplementation != null) {
                     OpenJavaEditor.open(PROJECT_TRANSFORMER.from(project), stepImplementation.getMethod());
                 }
@@ -138,36 +80,4 @@ public class JumpToSubStepDefinitionHandler extends AbstractHandler {
         }
         return null;
     }
-
-
-    /**
-     * @param currentDocument
-     * @param offset
-     * @return
-     */
-    private String getCurrentLine(final IDocument currentDocument, final int offset) {
-        String rtn = null;
-
-        int lineNumber;
-        try {
-            lineNumber = currentDocument.getLineOfOffset(offset);
-            final int lineStart = currentDocument.getLineOffset(lineNumber);
-
-            String line = currentDocument.get(lineStart, currentDocument.getLineLength(lineNumber));
-
-            final int commentIdx = line.indexOf("#");
-
-            if (commentIdx >= 0) {
-                line = line.substring(0, commentIdx);
-            }
-
-            rtn = line.trim();
-
-        } catch (final BadLocationException e) {
-            FeatureEditorPlugin.instance().error("BadLocationException getting current line @offset: " + offset, e);
-        }
-
-        return rtn;
-    }
-
 }
